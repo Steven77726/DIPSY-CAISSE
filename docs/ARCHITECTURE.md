@@ -1,0 +1,23 @@
+# Architecture
+
+React, TypeScript et Vite ; client Supabase épinglé ; ExcelJS chargé uniquement lors d’un export Excel. Le service worker met en cache l’interface et ses ressources, jamais les requêtes Supabase Auth/API.
+
+Le schéma contient `caisse_access`, `caisse_products`, `caisse_tables`, `caisse_clients`, `caisse_orders`, `caisse_order_lines`, `caisse_payments`, `caisse_operations` et `caisse_events`. Toutes les tables ont RLS. Les lectures sont accordées aux membres autorisés du restaurant. Les écritures directes sont révoquées.
+
+Les RPC publiques sont des wrappers SECURITY INVOKER. Le code privilégié nécessaire aux transactions se trouve dans le schéma non exposé `caisse_private`, avec `search_path` vide, contrôle explicite `auth.uid()` et autorisation fraîche depuis l’adresse confirmée de `auth.users`. Aucune autorisation ne repose sur `user_metadata`.
+
+Une mutation attend la validation de l’écriture IndexedDB. La RPC prend un verrou sur son identifiant, retourne la réponse déjà enregistrée en cas de réessai, puis verrouille la commande et vérifie sa version. Elle écrit la mutation, les paiements, le résultat idempotent et l’historique dans la même transaction. Le client retire l’opération locale seulement après une réponse serveur positive. Un identifiant existant avec un autre contenu est refusé.
+
+Les événements Postgres Realtime déclenchent un rafraîchissement cohérent par une RPC de lecture MVCC. La reconnexion réseau, le retour au premier plan et un contrôle périodique reprennent la file. Les conflits restent conservés jusqu’à résolution explicite. Un brouillon rejeté peut être consulté avant abandon ; une opération dont le résultat est inconnu ne peut pas être abandonnée.
+
+La future connexion à Dipsy Tables dispose de `caisse_tables.external_table_id` et `caisse_orders.external_reservation_id`. Aucun lien avec ses tables n’est encore actif ; le partage du projet n’implique aucun droit automatique entre applications.
+
+## Limites connues
+
+- Pas de terminal bancaire intégré, remboursement, avoir, clôture de caisse fiscale ou impression de ticket en V1.
+- Après un premier règlement, les articles sont verrouillés pour préserver les montants. Le solde peut toujours être payé.
+- Les réglages de TVA sont explicites ; l’application ne décide pas du régime fiscal d’un produit. La ventilation des encaissements est un outil de rapprochement à valider avec la comptable.
+- Le chargement initial utilise un instantané complet du restaurant. Prévoir pagination et agrégats serveur avant un historique volumineux.
+- Une adresse désactivée est refusée immédiatement par la base. Les données déjà consultées hors ligne ne peuvent pas être retirées à distance d’un appareil déconnecté.
+- La copie JSON de l’interface n’est pas une sauvegarde de reprise : elle exclut le journal `caisse_operations`. Une vraie sauvegarde doit conserver les neuf tables et les identités Auth correspondantes.
+- Les sauvegardes nocturnes ne deviennent actives qu’après configuration des secrets dédiés et de la variable d’activation.

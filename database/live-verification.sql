@@ -4,6 +4,7 @@ select jsonb_build_object(
  'realtime_tables', (select jsonb_agg(tablename) from pg_publication_tables where pubname='supabase_realtime' and tablename like 'caisse_%'),
  'anonymous_table_write', has_table_privilege('anon','public.caisse_payments','INSERT'),
  'staff_direct_payment_write', has_table_privilege('authenticated','public.caisse_payments','INSERT'),
+ 'public_access', public.caisse_public_access(),
  'anonymous_rpc', has_function_privilege('anon','public.caisse_apply_operation(jsonb)','EXECUTE'),
  'initial_admin_count', (select count(*) from public.caisse_access where role='admin' and active)
 );

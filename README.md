@@ -16,9 +16,11 @@ npm run check
 
 L’URL `/?demo=1` ouvre une démonstration sans compte. Les prix de cette démonstration ne sont pas la carte réelle du restaurant.
 
-## Sécurité et enregistrements
+## Accès et enregistrements
 
-- Supabase Auth, adresses vérifiées et liste d’accès avec rôles administrateur/personnel.
+L’URL canonique est https://steven77726.github.io/DIPSY-CAISSE/ . À la demande explicite du propriétaire, elle ouvre directement **la vraie caisse partagée, sans compte ni mot de passe**. Toute personne disposant du lien peut consulter les clients, commandes et règlements, modifier la carte et enregistrer des opérations. La gestion des comptes reste réservée aux administrateurs authentifiés.
+
+- Accès libre activé uniquement pour DIPSY CAISSE par `database/public-access.sql`. Un interrupteur serveur permet de revenir au mode Supabase Auth avec adresses vérifiées et liste d’accès.
 - RLS sur toutes les tables ; aucune écriture REST directe, y compris pour l’administrateur.
 - Seule la clé **publishable** apparaît dans le navigateur. Aucune clé `service_role`.
 - Paiements atomiques, verrou de commande, version attendue et identifiants d’opération uniques.
@@ -31,7 +33,7 @@ L’URL `/?demo=1` ouvre une démonstration sans compte. Les prix de cette démo
 
 Le workflow GitHub Actions vérifie calculs, stockage, synchronisation et PostgreSQL, construit puis publie GitHub Pages après chaque push validé sur `main`. Les pull requests exécutent les contrôles sans publier.
 
-Activer **Settings → Pages → Source → GitHub Actions** dans le dépôt. Configurer ensuite les URL autorisées Supabase Auth et créer le compte du premier administrateur avec son adresse déjà autorisée. Voir [le guide de mise en service](docs/DEPLOYMENT.md).
+Activer **Settings → Pages → Source → GitHub Actions** dans le dépôt. Le mode libre n’exige aucune inscription. Conserver les URL Supabase Auth existantes pour le retour éventuel au mode protégé. Voir [le guide de mise en service](docs/DEPLOYMENT.md).
 
 ## Comptabilité
 

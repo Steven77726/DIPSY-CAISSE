@@ -3,8 +3,9 @@ import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {randomUUID as uuid} from 'node:crypto';
 const schema=await readFile(new URL('../database/schema.sql',import.meta.url),'utf8');
-const admin=uuid(),staff=uuid(),outsider=uuid();
-const setup=async()=>{const db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;create publication supabase_realtime;`);await db.exec(schema);await db.exec("insert into public.caisse_access(email,name,role) values('admin@example.test','Admin test','admin')");await db.query("insert into auth.users values ($1,'admin@example.test',now()),($2,'staff@example.test',now()),($3,'outsider@example.test',now())",[admin,staff,outsider]);return db;};
+const publicSchema=(await readFile(new URL('../database/public-access.sql',import.meta.url),'utf8')).split('-- ACTIVATE_PUBLIC_ACCESS:')[0];
+const admin=uuid(),staff=uuid(),outsider=uuid(),guest=uuid();
+const setup=async()=>{const db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;create publication supabase_realtime;`);await db.exec(schema);await db.exec(publicSchema);await db.exec("insert into public.caisse_access(email,name,role) values('admin@example.test','Admin test','admin')");await db.query("insert into auth.users values ($1,'admin@example.test',now()),($2,'staff@example.test',now()),($3,'outsider@example.test',now()),($4,null,null)",[admin,staff,outsider,guest]);return db;};
 let count=0;const check=(name,fn)=>Promise.resolve().then(fn).then(()=>{count++;process.stdout.write(`✓ ${name}\n`);});
 const db=await setup();
 const auth=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
@@ -31,17 +32,50 @@ await auth(staff);
 await check('personnel : lecture autorisée, changement de prix refusé',async()=>{assert.equal((await db.query('select count(*)::int as n from caisse_orders')).rows[0].n,1);await assert.rejects(call(op('save_product',product,2,{name:'Hack'})),/ADMIN_REQUIRED/);assert.equal((await db.query('select count(*)::int as n from caisse_access')).rows[0].n,0);assert.equal((await db.query('select count(*)::int as n from caisse_operations')).rows[0].n,0);assert.equal((await db.query("select count(*)::int as n from caisse_events where kind='save_access'")).rows[0].n,0);});
 await auth(outsider);
 await check('utilisateur authentifié non autorisé : aucune donnée, aucune opération',async()=>{assert.equal((await db.query('select count(*)::int as n from caisse_orders')).rows[0].n,0);assert.equal((await db.query('select caisse_snapshot() as s')).rows[0].s,null);await assert.rejects(call(op('save_client',uuid(),0,{name:'Interdit'})),/ACCESS_DENIED/);});
-await db.exec('reset role;set role anon');
-await check('anonyme : aucune table ni RPC accessibles',async()=>{await assert.rejects(db.query('select * from caisse_orders'),/permission denied/);await assert.rejects(db.query('select caisse_snapshot()'),/permission denied/);await assert.rejects(call(create),/permission denied/);});
+await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub','',false)");await db.exec('set role anon');
+await check('accès libre désactivé : aucune donnée ni mutation anonyme',async()=>{assert.equal((await db.query('select count(*)::int as n from caisse_orders')).rows[0].n,0);assert.equal((await db.query('select caisse_snapshot() as s')).rows[0].s,null);assert.equal((await db.query('select caisse_public_access() as enabled')).rows[0].enabled,false);await assert.rejects(call(create),/ACCESS_DENIED/);});
 await db.exec('reset role');
 await check('utilisateur non confirmé refusé',async()=>{await db.query('update auth.users set email_confirmed_at=null where id=$1',[admin]);await auth(admin);assert.equal((await db.query('select caisse_my_role() as role')).rows[0].role,null);await db.exec('reset role');await db.query('update auth.users set email_confirmed_at=now() where id=$1',[admin]);});
+await check('accès libre réel : lecture et écriture sans compte, comptes d’accès protégés',async()=>{
+ await db.query('insert into public.caisse_runtime(id,public_access,public_actor) values(true,true,$1)',[guest]);
+ await db.query("select set_config('request.jwt.claim.sub','',false)");await db.exec('set role anon');
+ assert.equal((await db.query('select caisse_public_access() as enabled')).rows[0].enabled,true);
+ assert.equal((await db.query('select caisse_my_role() as role')).rows[0].role,'admin');
+ assert.equal((await db.query('select caisse_snapshot() as s')).rows[0].s.orders.length,1);
+ assert.equal((await db.query('select count(*)::int as n from caisse_access')).rows[0].n,0);
+ assert.equal((await db.query("select count(*)::int as n from caisse_events where kind='save_access'")).rows[0].n,0);
+ await assert.rejects(call(op('save_access',uuid(),0,{email:'guest@example.test',role:'admin',active:true})),/AUTHENTICATED_ADMIN_REQUIRED/);
+ await assert.rejects(db.query('update caisse_orders set version=999'),/permission denied/);
+ await assert.rejects(db.query('delete from caisse_payments'),/permission denied/);
+ await assert.rejects(db.query('update caisse_runtime set public_access=false'),/permission denied/);
+});
+await check('paiements publics : même clé, même paiement ; conflit et surpaiement refusés',async()=>{
+ const publicOrder=uuid();const publicLine=uuid();const deviceId=uuid();
+ const createPublic={...op('save_order',publicOrder,0,{status:'due',lines:[{id:publicLine,product_id:product,quantity:1}]}),deviceId};
+ await call(createPublic);
+ const partial={...op('pay',publicOrder,1,{payments:[{id:uuid(),method:'card',amount_cents:500}]}),deviceId};
+ await call(partial);await call(partial);
+ assert.equal((await db.query('select sum(amount_cents)::int as n from caisse_payments where order_id=$1',[publicOrder])).rows[0].n,500);
+ await assert.rejects(call({...partial,id:uuid()}),/VERSION_CONFLICT/);
+ await assert.rejects(call(op('pay',publicOrder,2,{payments:[{id:uuid(),method:'cash',amount_cents:3501}]})),/PAYMENT_EXCEEDS_BALANCE/);
+ await db.exec('reset role');
+ assert.equal((await db.query('select actor_id from caisse_operations where id=$1',[partial.id])).rows[0].actor_id,guest);
+ assert.equal((await db.query('select body from caisse_operations where id=$1',[partial.id])).rows[0].body.deviceId,deviceId);
+});
+await check('fermer l’accès libre bloque immédiatement les données et mutations publiques',async()=>{
+ await db.query('update public.caisse_runtime set public_access=false');await db.exec('set role anon');
+ assert.equal((await db.query('select caisse_public_access() as enabled')).rows[0].enabled,false);
+ assert.equal((await db.query('select caisse_snapshot() as s')).rows[0].s,null);
+ await assert.rejects(call(op('save_client',uuid(),0,{name:'Public refusé'})),/ACCESS_DENIED/);
+ await db.exec('reset role');
+});
 await check('copie complète et restauration sur une base isolée',async()=>{
- const tables=['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_operations','caisse_payments','caisse_events'];
+ const tables=['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_operations','caisse_payments','caisse_events','caisse_runtime'];
  const copy={};for(const table of tables)copy[table]=(await db.query(`select * from public.${table}`)).rows;
  const restored=await setup();await restored.exec('truncate public.caisse_access');
  for(const table of tables)for(const row of copy[table]){const keys=Object.keys(row).filter(k=>!(table==='caisse_order_lines'&&['net_cents','total_cents'].includes(k)));const values=keys.map(k=>{const v=row[k];return v instanceof Date?v.toISOString():v!==null&&typeof v==='object'?JSON.stringify(v):v;});await restored.query(`insert into public.${table}(${keys.join(',')}) ${table==='caisse_orders'?'overriding system value ':''}values(${keys.map((_,i)=>'$'+(i+1)).join(',')})`,values);}
  for(const table of tables){const r=(await restored.query(`select count(*)::int as n from public.${table}`)).rows[0].n;assert.equal(r,copy[table].length,table);}
- assert.equal((await restored.query('select sum(amount_cents)::int as n from caisse_payments')).rows[0].n,2200);assert.equal((await restored.query('select net_cents from caisse_order_lines')).rows[0].net_cents,2000);
- await restored.query("select set_config('request.jwt.claim.sub',$1,false)",[admin]);await restored.exec('set role authenticated');const replay=await restored.query('select public.caisse_apply_operation($1::jsonb) as result',[JSON.stringify(pay)]);assert.equal(replay.rows[0].result.version,3);assert.equal((await restored.query('select count(*)::int as n from caisse_payments')).rows[0].n,3);await restored.close();
+ assert.equal((await restored.query('select sum(amount_cents)::int as n from caisse_payments')).rows[0].n,2700);assert.equal((await restored.query('select net_cents from caisse_order_lines where id=$1',[line])).rows[0].net_cents,2000);
+ await restored.query("select set_config('request.jwt.claim.sub',$1,false)",[admin]);await restored.exec('set role authenticated');const replay=await restored.query('select public.caisse_apply_operation($1::jsonb) as result',[JSON.stringify(pay)]);assert.equal(replay.rows[0].result.version,3);assert.equal((await restored.query('select count(*)::int as n from caisse_payments')).rows[0].n,4);await restored.close();
  });
 await db.close();process.stdout.write(`\n${count} vérifications PostgreSQL réussies, restauration incluse.\n`);

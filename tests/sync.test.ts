@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import {it,expect,vi} from 'vitest';
 import {emptySnapshot} from '../src/lib/domain';
 const mock=vi.hoisted(()=>({auth:null as any,sends:[] as any[],loseReply:true,committed:new Set<string>(),snapshot:null as any}));
-vi.mock('../src/lib/supabase',()=>({supabase:{auth:{onAuthStateChange:(cb:any)=>{mock.auth=cb;},signOut:async()=>({})},channel:()=>({on(){return this;},subscribe(cb:any){cb('SUBSCRIBED');return this;},unsubscribe(){}}),rpc:(name:string,args?:any)=>name==='caisse_my_role'?Promise.resolve({data:'admin',error:null}):({abortSignal:async()=>{
+vi.mock('../src/lib/supabase',()=>({publicSupabase:{rpc:()=>({abortSignal:async()=>({data:false,error:null})})},supabase:{auth:{onAuthStateChange:(cb:any)=>{mock.auth=cb;},signOut:async()=>({})},channel:()=>({on(){return this;},subscribe(cb:any){cb('SUBSCRIBED');return this;},unsubscribe(){}}),rpc:(name:string,args?:any)=>name==='caisse_my_role'?Promise.resolve({data:'admin',error:null}):({abortSignal:async()=>{
  if(name==='caisse_my_role')return {data:'admin',error:null};
  if(name==='caisse_snapshot')return {data:mock.snapshot,error:null};
  const op=args.op;mock.sends.push(op);mock.committed.add(op.id);

@@ -8,7 +8,23 @@ Dans le dépôt, choisir **Settings → Pages → Build and deployment → Sourc
 
 Une publication Sites privée est également possible avec `.openai/hosting.json`. Le site Sites et GitHub Pages ont des origines différentes : leurs sessions et files locales sont distinctes. Choisir une URL canonique pour le personnel ; ne pas utiliser alternativement les deux origines pendant un service.
 
-## Supabase Auth
+## Accès libre actif
+
+L’URL canonique est https://steven77726.github.io/DIPSY-CAISSE/ . Le propriétaire a explicitement demandé un accès public complet à la vraie caisse, sans mot de passe. Aucun compte personnel, lien de connexion ou réglage global d’Auth anonyme n’est nécessaire. Produits, tables, clients, commandes, paiements et comptabilité sont partagés entre visiteurs. Les comptes d’accès restent privés.
+
+La migration additive `database/public-access.sql` suit le schéma initial et le durcissement du journal. Elle conserve RLS et les fonctions transactionnelles, puis active uniquement la caisse. Elle crée une identité technique sans adresse ni mot de passe pour les clés étrangères du journal. Les opérations contiennent aussi l’identifiant local d’appareil, qui sert à la traçabilité et ne constitue pas une preuve d’identité.
+
+Pour refermer l’accès, exécuter depuis une session administrative :
+
+```sql
+update public.caisse_runtime
+set public_access=false, updated_at=now()
+where id;
+```
+
+La base refuse alors les lectures et mutations publiques. Les données déjà chargées sur un appareil hors ligne ne peuvent pas être effacées à distance. Recharger l’interface après avoir vidé toute file en attente avant de changer le mode. Ne jamais remplacer les identifiants d’opérations en attente.
+
+## Supabase Auth — mode protégé de secours
 
 Le schéma `database/schema.sql` a été installé sur le projet partagé. Ne pas le rejouer : il s’agit de l’état initial versionné, pas d’un script idempotent. Les modifications futures nécessitent des migrations additives revues séparément.
 
@@ -19,9 +35,13 @@ L’adresse du premier administrateur a été autorisée séparément, sans la p
 3. Sur la caisse, ouvrir **Première connexion ?**, utiliser l’adresse autorisée et choisir un mot de passe de 12 caractères ou plus. Confirmer le lien reçu puis se connecter.
 4. Ajouter les vrais produits avec le taux de TVA approprié et les vraies tables dans Paramètres.
 5. Ajouter les adresses du personnel dans **Équipe & accès**. Chaque personne active ensuite son compte et confirme son e-mail. L’application n’envoie pas d’invitations lorsqu’une adresse est autorisée.
-6. Faire un essai de service sur deux appareils connectés avec des utilisateurs autorisés avant la mise en exploitation.
+6. En mode protégé, faire un essai de service sur deux appareils connectés avec des utilisateurs autorisés avant la mise en exploitation.
 
 Le navigateur contient une clé publishable publique, protégée par RLS et les fonctions transactionnelles. Ne jamais placer un secret, mot de passe ou `service_role` dans une variable `VITE_*` ou dans le dépôt.
+
+## Préparer la carte
+
+En mode libre, ouvrir directement **Paramètres** pour ajouter les vrais produits, leurs taux de TVA et les tables. Aucune donnée fictive de démonstration n’est ajoutée à la base réelle.
 
 ## Sur l’iPad et l’iPhone
 

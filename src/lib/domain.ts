@@ -11,7 +11,7 @@ export interface Payment {id:string;order_id:string;operation_id:string;method:'
 export interface Access {email:string;name:string;role:Role;active:boolean;version:number}
 export interface AuditEvent {id:string;operation_id:string;order_id:string|null;kind:string;created_at:string;before_state:unknown;after_state:unknown}
 export interface Snapshot {products:Product[];tables:Table[];clients:Client[];orders:Order[];lines:Line[];payments:Payment[];access:Access[];events:AuditEvent[];server_time?:string}
-export interface Operation {id:string;actor:string;kind:string;entityId:string;baseVersion:number;payload:Record<string,unknown>;status:'queued'|'conflict'|'failed';error?:string;createdAt:string}
+export interface Operation {id:string;actor:string;deviceId?:string;kind:string;entityId:string;baseVersion:number;payload:Record<string,unknown>;status:'queued'|'conflict'|'failed';error?:string;createdAt:string}
 export const emptySnapshot = ():Snapshot => ({products:[],tables:[],clients:[],orders:[],lines:[],payments:[],access:[],events:[]});
 export const categories:{id:Category|'all';name:string;short:string}[]=[{id:'all',name:'Tous les produits',short:'Tout'},{id:'entrees',name:'Entrées',short:'Entrées'},{id:'plats',name:'Plats',short:'Plats'},{id:'desserts',name:'Desserts',short:'Desserts'},{id:'boissons',name:'Boissons',short:'Boissons'},{id:'alcool',name:'Alcool',short:'Alcool'}];
 export const statusNames:Record<Status,string>={open:'En cours',due:'À régler',paid:'Réglée',cancelled:'Annulée'};

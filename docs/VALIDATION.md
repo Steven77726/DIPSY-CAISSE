@@ -37,3 +37,9 @@ Aperçu vérifié dans le navigateur : commandes, ticket existant, encaissement 
 - Synchronisation réelle entre deux appareils et interruption/reprise de leur réseau pendant un service d’essai.
 - Carte réelle, taux de TVA et rapprochement des exports par la comptable.
 - Première sauvegarde chiffrée externe et restauration réelle de ce dump après configuration des secrets. Le test automatique local ne remplace pas cet exercice d’exploitation.
+
+## Correction des boutons de commande
+
+Les deux boutons « Nouvelle commande » ouvrent un formulaire de table/commande libre. Fermer le formulaire conserve le ticket précédent. Un brouillon non envoyé est signalé avant remplacement. Sur mobile, la confirmation ouvre le ticket avec un bouton « Ajouter des produits » pour revenir à la carte.
+
+Parcours contrôlé dans le navigateur : choix de Table 01, ajout d’un produit, quantité de 1 à 2, ouverture puis fermeture du second bouton « + » avec conservation du brouillon, enregistrement, modification de quantité et nouvel enregistrement. Les articles et totaux restent visibles après confirmation grâce au chargement du dernier instantané reçu. Contrôle complémentaire en 390 × 844 : commande libre nommée, ticket ouvert et bouton d’ajout visible. Toutes les commandes de ce parcours utilisent la démonstration locale.

@@ -1,5 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './style.css';
+import './responsive.css';
+import {trackViewport} from './lib/viewport';
+trackViewport();
 createRoot(document.getElementById('root')!).render(<App/>);
 if ('serviceWorker' in navigator && import.meta.env.PROD) navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(()=>{});

@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './style.css';
 import './responsive.css';
+import './ipad.css';
 import {trackViewport} from './lib/viewport';
 trackViewport();
 createRoot(document.getElementById('root')!).render(<App/>);

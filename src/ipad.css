@@ -1,0 +1,133 @@
+/* iPad browser and compact desktop windows. Keep the service within reach. */
+.ticket-backdrop,.catalog-edit-label,.orders-overview-toggle{display:none}
+.table-scroll td .icon-btn{min-width:44px;min-height:44px}
+.ticket-title>div{min-width:0}.ticket-title h2{overflow-wrap:anywhere}
+.ticket-backdrop{position:fixed;inset:0;z-index:19;background:#203a2980;cursor:default}
+.catalog-heading{scroll-margin-top:16px}
+
+@media(min-width:701px) and (max-width:1366px){
+ :root{--tablet-rail:calc(92px + env(safe-area-inset-left,0px))}
+ .sidebar{width:var(--tablet-rail);padding-left:env(safe-area-inset-left,0px);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+ .sidebar button>span{font-size:11px}.sidebar button{min-height:72px;gap:8px}
+ .sidebar-logo{margin-bottom:26px}.sidebar-flower{display:none}
+ .app-main{margin-left:var(--tablet-rail);width:calc(100% - var(--tablet-rail))}
+ .topbar{height:64px;min-height:64px;padding-inline:20px max(20px,env(safe-area-inset-right,0px))}
+ .breadcrumbs strong{font-size:14px}.sync-status{font-size:13px;min-height:44px}
+ .service-header{padding:14px 20px;gap:12px}
+ .service-header h1{font-size:26px;margin-top:4px}.service-header p{font-size:12px;margin-top:4px}
+ .service-header .eyebrow{font-size:9px}.service-snapshot{min-width:205px;padding:11px 14px;gap:6px}
+ .service-snapshot>strong{font-size:22px}.service-snapshot small{font-size:11px}
+ .workspace-commands{padding-inline:20px max(20px,env(safe-area-inset-right,0px))}
+ .caisse-room{padding:16px;margin-bottom:18px;border-radius:14px}
+ .room-heading{gap:12px;margin-bottom:12px}.room-heading h2{font-size:20px;margin-bottom:5px}
+ .room-heading p{font-size:12px}.room-heading .btn{font-size:13px;padding-inline:12px}
+ .room-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;padding:4px;max-height:284px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ .room-table{min-height:116px;padding:12px;gap:10px}.room-table strong{font-size:19px}
+ .room-table small{line-height:1.4}.room-selected{flex-wrap:wrap;font-size:14px;gap:10px;padding-top:12px;margin-top:12px}
+ .room-selected .btn{font-size:13px;min-height:46px}
+ .section-line{margin-bottom:8px;align-items:center}.section-heading h2{font-size:18px}
+ .section-heading p{display:none}.orders-overview-toggle{display:inline-flex}.orders-overview-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}.orders-overview.collapsed{display:none}.section-line .btn{font-size:13px;min-height:46px}
+ .order-filter>button{font-size:13px}.order-card{min-height:104px;flex-basis:172px;padding:11px;gap:8px}
+ .order-card>strong{font-size:16px}.order-strip{padding:8px 0 12px;margin-bottom:10px}
+ .catalog-heading{gap:12px;margin-bottom:12px}.catalog-heading h2{font-size:22px}
+ .catalog-heading .search-field{max-width:320px;flex:1}.search-field input:not([type=checkbox]){font-size:16px;min-height:46px}
+ .category-tabs{gap:8px;margin-bottom:14px;scroll-padding-inline:4px}
+ .category-tabs button{min-height:48px;flex-shrink:0;padding:10px 14px;font-size:14px}
+ .category-tabs svg{display:none}
+ .product-card,.custom-product{min-height:154px;padding:16px}
+ .product-top{margin-bottom:12px}.product-card>strong{font-size:16px;margin-bottom:12px}
+ .product-bottom>span{font-size:19px}.product-bottom small{font-size:12px}
+ .custom-product strong{font-size:14px}.custom-product small{font-size:12px}
+ .catalog-foot{font-size:12px;flex-wrap:wrap;margin-top:16px}.catalog-foot button{font-size:13px;min-height:44px}
+ .ticket-context{gap:8px}.context-select{min-width:0;flex-basis:100%}
+ .context-select select,.ticket-context input.order-label{font-size:16px;min-height:44px}
+ .ticket-bottom>.btn{min-height:50px;font-size:15px;white-space:normal;line-height:1.4}
+ .ticket-title h2{font-size:18px}.ticket-line .quantity-control>button{width:48px;min-width:48px;min-height:48px}
+ .ticket-line .quantity-control{height:48px}.ticket-line .quantity-control b{min-width:32px;font-size:16px}
+ .line-correction{display:flex}
+ .ticket-lines{scroll-padding-block:12px;-webkit-overflow-scrolling:touch}
+ .ticket-list-caption{font-size:10px}.ticket-secondary button{font-size:13px}
+ .ticket-saved{font-size:12px}.ticket-total strong{font-size:28px}
+ input:not([type=checkbox]),select,textarea{font-size:16px}
+ .modal{max-width:560px;padding:24px;max-height:calc(var(--app-height,100dvh) - 32px)}
+ .modal.wide{max-width:850px}.modal-top{top:-24px}.modal-top p{font-size:14px;line-height:1.5}
+ .modal label{font-size:15px}.modal .amount-input{font-size:32px}
+ .modal .btn{min-height:48px;font-size:15px}.modal .checkbox-label{min-height:44px}
+ .payment-balance{padding:18px;margin-bottom:16px}.payment-balance>span,.payment-balance p{font-size:13px}
+ .payment-methods{margin:16px 0}.payment-methods button{min-height:76px}
+ .quick-amounts button{font-size:14px;min-height:48px}.payment-note{font-size:12px!important}
+ .payments-table{display:none}.payment-order-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:16px;background:#f6f8f2}
+ .page-content{padding:24px 20px}.page-intro h1{font-size:28px}.page-intro p{font-size:14px}
+ .stat-top{font-size:13px;line-height:1.5}.stat small{font-size:12px}
+ .panel-toolbar{gap:14px}.panel-toolbar .order-filter{overflow:auto;max-width:100%;gap:20px}
+ .panel-toolbar .order-filter>button{flex-shrink:0}.panel-toolbar .search-field{max-width:320px}
+ .settings-tabs{overflow:auto;gap:24px}.settings-tabs>button{flex-shrink:0;min-height:48px;font-size:16px}
+ .panel-title h2{font-size:20px}.panel-title p{font-size:14px;line-height:1.5}
+ .date-toolbar{flex-wrap:wrap}.date-toolbar input{font-size:16px}
+ .toast{font-size:14px;line-height:1.5}
+}
+
+/* In landscape the menu scrolls independently; the total never leaves the screen. */
+@media(min-width:951px) and (max-width:1366px){
+ .service-screen{height:var(--app-height,100dvh);min-height:0;overflow:hidden}
+ .service-screen .app-main{min-height:0;height:100%;overflow:hidden}
+ .service-screen .service-header,.service-screen .topbar,.service-screen .demo-banner,.service-screen .offline-banner{flex-shrink:0}
+ .service-screen .workspace-commands{min-height:0;display:flex;flex-direction:column;padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
+ .workspace-commands>.commands-workspace:not([hidden]){min-height:0;flex:1;display:flex;flex-direction:column}
+ .commands-layout{min-height:0;flex:1;grid-template-columns:minmax(0,1fr) 340px;gap:18px}
+ .catalog-area{min-height:0;max-height:100%;overflow-y:auto;overscroll-behavior:contain;padding:4px 8px 16px 4px;-webkit-overflow-scrolling:touch}
+ .catalog-tools{position:sticky;top:0;z-index:3;background:var(--bg);padding-top:12px}
+ .catalog-heading{scroll-margin-top:12px}
+ .products-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .ticket{position:relative;top:auto;height:100%;max-height:100%;min-height:0;overflow-y:auto;overflow-x:hidden}
+ .ticket-heading{padding:12px 16px}.ticket-context{padding:10px 16px}
+ .ticket-context .context-select{flex-basis:calc(50% - 4px)}
+ .context-select select{text-overflow:ellipsis}
+ .ticket-lines{min-height:96px;flex:1 1 auto;max-height:none;overflow-y:auto}
+ .ticket-bottom{padding:12px 16px;position:sticky;bottom:0;z-index:1;background:#fff}
+ .ticket .empty{padding:20px 8px}.ticket .empty-icon{display:none}.ticket-total{margin-block:10px}.ticket-secondary{margin:4px 0}.ticket-saved{margin-top:4px;padding-top:4px}
+ .ticket-bottom .subtotal{margin-bottom:6px}
+ .service-screen .reservation-panel{flex-shrink:0;margin-bottom:14px;padding:14px 18px}
+ .service-screen .app-footer{display:none}
+}
+@media(min-width:1200px) and (max-width:1366px){.products-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+@media(min-width:701px) and (max-width:950px){
+ .service-header p{max-width:300px;line-height:1.5}
+ .room-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .room-table>span:first-child{align-items:flex-start;gap:6px}
+ .mobile-ticket-toggle{left:calc(var(--tablet-rail) + 20px);right:max(20px,env(safe-area-inset-right,0px));min-height:60px}
+ .ticket.mobile-open{width:520px;max-width:calc(100% - 48px);box-shadow:0 8px 40px #203a2933}
+ .ticket-backdrop{display:block}.ticket.mobile-open .ticket-context{flex-direction:row}
+ .ticket.mobile-open .context-select{flex-basis:40%;min-width:180px}
+ .ticket.mobile-open .ticket-bottom{position:sticky;bottom:0;background:#fff;z-index:1;padding:18px}
+ .ticket.mobile-open .ticket-lines{min-height:96px;overflow-x:hidden}
+ .toast{left:calc(50% + 46px);bottom:max(100px,calc(env(safe-area-inset-bottom,0px) + 100px))}
+}
+@media(max-width:700px){.ticket-backdrop{display:block}.ticket.mobile-open{box-shadow:0 8px 40px #203a2933}}
+
+/* Article editing must remain accessible without horizontal scrolling. */
+@media(max-width:1100px){
+ .product-catalog .table-scroll{overflow:visible}
+ .product-catalog table,.product-catalog tbody{display:block;width:100%}
+ .product-catalog thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .product-catalog tbody{padding:0 16px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+ .product-catalog tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 10px;border:1px solid var(--line);border-radius:12px;padding:16px;align-items:start}
+ .product-catalog td{display:block;border:0;padding:0;white-space:normal;font-size:15px;min-width:0}
+ .product-catalog td[data-label]::before{content:attr(data-label);display:block;font-size:12px;color:#647269;margin-bottom:6px}
+ .product-catalog .catalog-product-name{grid-column:1/-1;overflow-wrap:anywhere}
+ .catalog-product-name strong{font-size:18px}.catalog-product-name small{font-size:13px}
+ .product-catalog td[data-label="Ordre dans la rubrique"]{grid-column:1/-1}
+ .product-catalog .catalog-product-edit{grid-column:1/-1}
+ .catalog-product-edit .icon-btn{min-height:48px;width:100%;background:#f0f4e9;gap:8px;font-size:14px;color:var(--green)}
+ .catalog-edit-label{display:inline}.product-catalog .badge{font-size:12px}
+}
+@media(max-width:700px){.product-catalog tbody{grid-template-columns:1fr}.catalog-product-edit .icon-btn{min-height:48px}}
+
+/* Large iPads still need touch targets when wider than a laptop breakpoint. */
+@media(pointer:coarse){
+ input:not([type=checkbox]),select,textarea,.context-select select,.search-field input:not([type=checkbox]){font-size:16px}
+ .btn,.btn.compact,.icon-btn,.sync-status,.quick-amounts button{min-height:48px}
+ .search-field button,.toast>button{min-width:44px;min-height:44px;justify-content:center;align-items:center}
+ .product-card:hover:not(:disabled){transform:none}
+}

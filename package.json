@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:database": "node scripts/test-database.mjs",
     "check": "npm test && npm run test:database && npm run test:bridge && npm run build",
-    "test:bridge": "node scripts/test-bridge.mjs && node scripts/test-corrections.mjs"
+    "test:bridge": "node scripts/test-bridge.mjs && node scripts/test-corrections.mjs && node scripts/test-table-room.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.119.0",

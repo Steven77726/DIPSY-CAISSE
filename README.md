@@ -53,3 +53,7 @@ Le bouton **CAISSE** de chaque réservation ouvre sa fiche par UUID stable. Les 
 - [Vérifications effectuées](docs/VALIDATION.md)
 
 La procédure de restauration est vérifiée automatiquement sur PostgreSQL embarqué avec des données de test. Les sauvegardes nocturnes externes sont fournies mais nécessitent leurs secrets et leur activation ; elles ne sont pas actives par défaut.
+
+## Tables de la caisse
+
+L’accès direct sans paramètre est https://steven77726.github.io/DIPSY-CAISSE/. Dans Commandes : créer/renommer une table, toucher sa fiche pour ouvrir son ticket et valider pour lancer le service. Gris = libre ou préparation ; vert = service lancé ; rouge = payée jusqu’à « Libérer la table ». Les articles sont enregistrés automatiquement et chaque table conserve son brouillon. Voir [le fonctionnement des tables](docs/TABLE-ROOM.md).

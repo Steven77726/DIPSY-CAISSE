@@ -33,3 +33,9 @@ Objectifs de reprise à définir après choix de la sauvegarde : le workflow quo
 Le périmètre courant comporte **quinze tables** : les dix tables caisse initiales, `caisse_reservation_cases`, `dipsy_tables_state`, `dipsy_reservations`, `dipsy_tables_imports` et `dipsy_bridge_operations`. Les scripts incluent les deux préfixes applicatifs. La source, la projection, les fiches et les clés d’opération doivent rester cohérentes. `npm run test:bridge` restaure ces quinze tables dans une seconde base isolée, vérifie leurs effectifs puis rejoue un paiement et l’ouverture d’une réservation sans créer de doublon. Les identités Auth sont toujours une dépendance de la restauration.
 
 Les anciennes copies des appareils sont conservées avant la première migration. Si la version serveur recule après restauration, Tables demande une comparaison avec la copie locale ; il ne la remplace pas automatiquement. Voir [la procédure de passerelle](RESERVATION-BRIDGE.md).
+
+## Tables autonomes de Dipsy Caisse
+
+Le périmètre courant comprend aussi `caisse_table_sessions`, soit seize tables au total. Cette table associe chaque occupation à son ticket et conserve les dates de lancement et de libération. Elle doit être restaurée avec les commandes, opérations, paiements et événements. Le dump `caisse_*` l’inclut automatiquement. Appliquer aussi la migration `20261117152052_caisse_table_services.sql` avant la restauration des données.
+
+`npm run test:bridge` comprend un exercice supplémentaire sur les seize tables : restauration des occupations, puis réessai d’une ancienne libération. Le ticket du service suivant reste occupé et aucun paiement n’est supprimé ou ajouté.

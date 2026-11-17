@@ -21,6 +21,7 @@ export function demoSnapshot():Snapshot{
  for(let i=6;i<22;i++){const o=order(i,(i*3)%16,'paid',70+i*9,[[i%8,1+i%3],[15+i%5,1+i%2]],i%3);const total=orderTotal(s,o.id);const mixed=i%4===0;s.payments.push({id:uid(2000+i),order_id:o.id,operation_id:uid(3000+i),method:mixed?'cash':'card',amount_cents:mixed?2000:total,created_at:o.updated_at,created_by:demoActor});if(mixed)s.payments.push({id:uid(4000+i),order_id:o.id,operation_id:uid(3000+i),method:'card',amount_cents:total-2000,created_at:o.updated_at,created_by:demoActor});}
  order(22,3,'cancelled',100,[[0,1]]);
  const partial=s.orders.find(o=>o.number===1042)!;s.payments.push({id:uid(5000),order_id:partial.id,operation_id:uid(5001),method:'cash',amount_cents:2000,created_at:ago(20),created_by:demoActor});
+ s.table_sessions=[];for(const t of s.tables){const o=s.orders.filter(o=>o.table_id===t.id).sort((a,b)=>b.created_at.localeCompare(a.created_at))[0];if(o&&o.status!=='cancelled')s.table_sessions.push({id:crypto.randomUUID(),table_id:t.id,order_id:o.id,launched_at:o.created_at,released_at:null,version:1,created_by:demoActor,created_at:o.created_at,updated_at:o.created_at});}
  s.access=[{email:'demo@dipsy.fr',name:'Steven',role:'admin',active:true,version:1}];
  s.events=s.orders.map(o=>({id:crypto.randomUUID(),operation_id:crypto.randomUUID(),order_id:o.id,kind:'save_order',created_at:o.created_at,before_state:null,after_state:{order:o}}));
  return s;
@@ -35,6 +36,11 @@ export function applyDemo(s:Snapshot,op:Operation):Snapshot{
   const old=next.lines.filter(l=>l.order_id===o.id);next.lines=next.lines.filter(l=>l.order_id!==o.id);
   p.lines.forEach((l:any)=>{const prev=old.find(x=>x.id===l.id);const prod=next.products.find(x=>x.id===l.product_id)!;const unit=prev?.unit_price_cents??prod.price_cents;const vat=prev?.vat_bps??prod.vat_bps;const total=unit*l.quantity;next.lines.push({...l,order_id:o.id,name:prev?.name??prod.name,reference:prev?.reference??prod.reference??'',unit_price_cents:unit,vat_bps:vat,accounting_group:prev?.accounting_group??prod.accounting_group,total_cents:total,net_cents:netCents(total,vat)});});
   next.orders=[o,...next.orders.filter(x=>x.id!==o.id)];
+  if(o.table_id){const sessions=next.table_sessions ||= [];const current=sessions.find(s=>s.table_id===o.table_id&&!s.released_at);if(current&&current.order_id!==o.id)throw Error('TABLE_BUSY');if(!current)sessions.push({id:crypto.randomUUID(),table_id:o.table_id,order_id:o.id,launched_at:p.status==='due'?now:null,released_at:null,version:1,created_by:demoActor,created_at:now,updated_at:now});}
+ }else if(op.kind==='launch_service'){
+  if(!existing||existing.version!==op.baseVersion)throw Error('VERSION_CONFLICT');const session=next.table_sessions?.find(s=>s.order_id===existing.id&&!s.released_at);if(!session)throw Error('TABLE_SESSION_NOT_FOUND');if(!next.lines.some(l=>l.order_id===existing.id))throw Error('EMPTY_ORDER');if(['paid','cancelled'].includes(existing.status))throw Error('ORDER_LOCKED');session.launched_at=new Date().toISOString();session.version++;existing.status='due';existing.version++;
+ }else if(op.kind==='release_table'){
+  const session=next.table_sessions?.find(s=>s.id===op.entityId),o=next.orders.find(o=>o.id===session?.order_id);if(!session||!o||session.version!==op.baseVersion||p.order_version!==o.version)throw Error('VERSION_CONFLICT');if(o.status!=='paid'||orderPaid(next,o.id)!==orderTotal(next,o.id))throw Error('TABLE_NOT_SETTLED');session.released_at=new Date().toISOString();session.version++;
  }else if(op.kind==='correct_line'){
   if(!existing||existing.version!==op.baseVersion)throw new Error('VERSION_CONFLICT');
   if(['paid','cancelled'].includes(existing.status))throw new Error('ORDER_LOCKED');
@@ -52,7 +58,7 @@ export function applyDemo(s:Snapshot,op:Operation):Snapshot{
    const amount=p.payments.reduce((n:number,x:any)=>n+x.amount_cents,0);const balance=orderTotal(next,existing.id)-orderPaid(next,existing.id);
    if(amount<=0||amount>balance)throw new Error('PAYMENT_EXCEEDS_BALANCE');
    p.payments.forEach((x:any)=>{next.payments.push({...x,operation_id:op.id,order_id:existing.id,created_at:new Date().toISOString(),created_by:demoActor});});existing.status=amount===balance?'paid':'due';
-  }else {if(orderPaid(next,existing.id)>0)throw new Error('ORDER_HAS_PAYMENTS');existing.status='cancelled';}
+  }else {if(orderPaid(next,existing.id)>0)throw new Error('ORDER_HAS_PAYMENTS');existing.status='cancelled';const session=next.table_sessions?.find(s=>s.order_id===existing.id&&!s.released_at);if(session){session.released_at=new Date().toISOString();session.version++;}}
   existing.version++;existing.updated_at=new Date().toISOString();
  }else{
   const key=({save_client:'clients',save_product:'products',save_table:'tables',save_access:'access'} as Record<string,'clients'|'products'|'tables'|'access'>)[op.kind];

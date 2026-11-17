@@ -79,4 +79,4 @@ Le ticket différencie une réponse réseau inconnue d’un refus explicite Post
 
 Le sélecteur des nouveaux tickets indépendants propose les clients propres à Caisse ; un ancien ticket refusé pour association à un client de réservation peut reprendre sans cette association, en conservant ses articles. Les refus d’autosauvegarde attendent une correction utilisateur avant un nouvel envoi.
 
-Sept régressions moteur supplémentaires couvrent le refus persistant, le conflit sans écrasement, la réponse de paiement perdue, les envois simultanés, le verrou d’un autre onglet, la rafale Realtime et la confirmation reçue dans un autre onglet. `npm run check` : 28 tests applicatifs et 61 vérifications PostgreSQL, restauration comprise.
+Sept régressions moteur supplémentaires couvrent le refus persistant, le conflit sans écrasement, la réponse de paiement perdue, les envois simultanés, le verrou d’un autre onglet, la rafale Realtime et la confirmation reçue dans un autre onglet. `npm run check` : 29 tests applicatifs et 61 vérifications PostgreSQL, restauration comprise.

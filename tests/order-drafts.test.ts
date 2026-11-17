@@ -16,3 +16,8 @@ it('une confirmation tardive conserve les modifications postérieures au ticket 
  const d={...freshDraft(),version:1,edited:true,submitted:true,revision:3,sentRevision:2,label:'Saisie suivante'};const s=emptySnapshot();s.orders=[{id:d.id,number:1,table_id:null,client_id:null,label:'Ancienne saisie',status:'open',version:2,created_at:'',updated_at:'',created_by:'x'}];
  expect(reconcileDraft(d,s,[])).toMatchObject({version:2,edited:true,submitted:false,label:'Saisie suivante'});
 });
+
+it('un ancien refus repris depuis la fenêtre de synchronisation ne relance pas l’autosauvegarde invalide',()=>{
+ const d={...freshDraft(),edited:true,submitted:true};const op={id:'rejected',actor:'x',kind:'save_order',entityId:d.id,baseVersion:0,payload:{},status:'failed' as const,error:'RESERVATION_USE_BRIDGE',createdAt:''};const s=emptySnapshot();
+ const paused=reconcileDraft(d,s,[op]);expect(paused).toMatchObject({edited:true,submitted:false});expect(paused.saveError).toContain('réservation liée');expect(reconcileDraft(paused,s,[])).toBe(paused);expect(reconcileDraft(paused,s,[op])).toBe(paused);
+});

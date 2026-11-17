@@ -1,5 +1,5 @@
 export type Role = 'admin' | 'staff';
-export type Category = 'entrees'|'plats'|'desserts'|'boissons'|'alcool';
+export type Category = 'entrees'|'plats'|'desserts'|'boissons'|'alcool'|'vins'|'cocktails';
 export type Group = 'food'|'non_alcohol'|'alcohol';
 export type Status = 'open'|'due'|'paid'|'cancelled';
 export interface Product {reference?:string;id:string;name:string;category:Category;price_cents:number;vat_bps:number;accounting_group:Group;active:boolean;version:number}
@@ -14,7 +14,7 @@ export interface TableSession {id:string;table_id:string;order_id:string;launche
 export interface Snapshot {table_sessions?:TableSession[];products:Product[];tables:Table[];clients:Client[];orders:Order[];lines:Line[];payments:Payment[];access:Access[];events:AuditEvent[];server_time?:string}
 export interface Operation {id:string;actor:string;deviceId?:string;kind:string;entityId:string;baseVersion:number;payload:Record<string,unknown>;status:'queued'|'conflict'|'failed';error?:string;createdAt:string}
 export const emptySnapshot = ():Snapshot => ({products:[],tables:[],clients:[],orders:[],lines:[],payments:[],access:[],events:[]});
-export const categories:{id:Category|'all';name:string;short:string}[]=[{id:'all',name:'Tous les produits',short:'Tout'},{id:'entrees',name:'Entrées',short:'Entrées'},{id:'plats',name:'Plats',short:'Plats'},{id:'desserts',name:'Desserts',short:'Desserts'},{id:'boissons',name:'Boissons',short:'Boissons'},{id:'alcool',name:'Alcool',short:'Alcool'}];
+export const categories:{id:Category|'all';name:string;short:string}[]=[{id:'all',name:'Tous les produits',short:'Tout'},{id:'plats',name:'Plats',short:'Plats'},{id:'vins',name:'Vins',short:'Vins'},{id:'cocktails',name:'Cocktails',short:'Cocktails'},{id:'boissons',name:'Boissons',short:'Boissons'},{id:'alcool',name:'Alcool',short:'Alcool'}];
 export const statusNames:Record<Status,string>={open:'En cours',due:'À régler',paid:'Réglée',cancelled:'Annulée'};
 export const eventNames:Record<string,string>={launch_service:'Service lancé',release_table:'Table libérée',correct_line:'Article corrigé',save_order:'Commande enregistrée',pay:'Règlement enregistré',cancel_order:'Commande annulée',save_client:'Fiche client enregistrée',save_product:'Produit mis à jour',save_table:'Table mise à jour',save_access:'Accès mis à jour'};
 export const euro=(cents:number)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(cents/100);

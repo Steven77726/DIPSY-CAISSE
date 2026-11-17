@@ -17,7 +17,7 @@ export default function Commands({onPay,onProduct,onSettings,reservationOrderId}
  const dirty=draft.edited||(!saved&&draft.lines.length>0);
  useEffect(()=>{if(saved&&saved.version!==draft.version&&(!draft.edited||draft.submitted&&!waiting))fromOrder(saved);},[saved?.version,waiting]);
  useEffect(()=>{if(reservationOrderId){const o=data.orders.find(o=>o.id===reservationOrderId);if(o&&draft.id!==o.id)fromOrder(o);}},[reservationOrderId,data.orders]);
- useEffect(()=>{if(!mobileTicket)return;const media=window.matchMedia('(max-width:700px)');const update=()=>document.body.classList.toggle('mobile-ticket-open',media.matches);update();media.addEventListener('change',update);return()=>{media.removeEventListener('change',update);document.body.classList.remove('mobile-ticket-open');};},[mobileTicket]);
+ useEffect(()=>{if(!mobileTicket)return;const media=window.matchMedia('(max-width:950px)');const update=()=>document.body.classList.toggle('mobile-ticket-open',media.matches);update();media.addEventListener('change',update);return()=>{media.removeEventListener('change',update);document.body.classList.remove('mobile-ticket-open');};},[mobileTicket]);
  const active=data.orders.filter(o=>['open','due'].includes(o.status));const shown=active.filter(o=>filter==='all'||o.status===filter);
  const total=draft.lines.reduce((n,l)=>n+l.quantity*l.unit_price_cents,0);const vat=draft.lines.reduce((n,l)=>{const t=l.quantity*l.unit_price_cents;return n+t-netCents(t,l.vat_bps);},0);
  const products=data.products.filter(p=>p.active&&(category==='all'||p.category===category)&&p.name.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')));

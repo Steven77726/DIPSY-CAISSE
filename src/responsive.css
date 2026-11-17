@@ -111,7 +111,8 @@ body.dialog-open{overflow:hidden}
  .ticket.mobile-open .subtotal{font-size:13px}.ticket.mobile-open .ticket-secondary button{font-size:13px;min-height:44px}
  .ticket.mobile-open .ticket-bottom>.btn{min-height:50px;font-size:15px}.ticket.mobile-open .ticket-saved{font-size:11px}
  input:not([type=checkbox]),select,textarea,.search-field input:not([type=checkbox]),.context-select select{font-size:16px}
- .modal .amount-input{font-size:30px}.modal{padding:18px;width:calc(100% - 16px);max-height:calc(var(--app-height,100dvh) - 16px)}
+ .modal .amount-input{font-size:30px}
+ .modal{--modal-safe-top:max(8px,env(safe-area-inset-top,0px));--modal-safe-bottom:max(8px,env(safe-area-inset-bottom,0px));padding:18px;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));width:calc(100% - max(8px,env(safe-area-inset-left,0px)) - max(8px,env(safe-area-inset-right,0px)));top:calc(var(--app-top,0px) + var(--app-height,100dvh)/2 + var(--modal-safe-top)/2 - var(--modal-safe-bottom)/2);max-height:calc(var(--app-height,100dvh) - var(--modal-safe-top) - var(--modal-safe-bottom))}
  .modal-top{top:-18px;padding:12px 0;margin-top:-6px}.modal-top h2{font-size:21px}.modal-top p{font-size:12px}
  .modal label{font-size:14px}.modal-actions{gap:10px}.modal-actions>.btn{white-space:normal;min-width:120px;line-height:1.5}
  .payment-balance{padding:18px;margin-bottom:16px}.payment-balance>span{font-size:12px}.payment-balance p{font-size:12px;line-height:1.6}

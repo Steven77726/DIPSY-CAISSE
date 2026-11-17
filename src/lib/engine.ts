@@ -3,13 +3,13 @@ import type {Session,RealtimeChannel} from '@supabase/supabase-js';
 import type {Snapshot,Operation,Role} from './domain';
 import {emptySnapshot,readableError} from './domain';
 import {supabase,publicSupabase} from './supabase';
-import {readCache,saveCache,readOperations,saveOperation,deleteOperation,clearCache} from './storage';
+import {readCache,saveCache,readOperations,saveOperation,deleteOperation,archiveOperation,clearCache} from './storage';
 import {demoSnapshot,applyDemo,demoActor} from './demo';
 import {reservationLink,startReservationHandoff,restoreAuthReservation} from './reservation-link';
 type Connection='connecting'|'connected'|'syncing'|'offline'|'error';
 interface State {mode:'loading'|'login'|'live'|'demo';session:{user:{id:string;email?:string}}|null;publicAccess:boolean;role:Role|null;data:Snapshot;pending:Operation[];connection:Connection;error:string;lastSync:string|null;toast:string}
 let state:State={mode:'loading',session:null,publicAccess:false,role:null,data:emptySnapshot(),pending:[],connection:navigator.onLine?'connecting':'offline',error:'',lastSync:null,toast:''};
-const listeners=new Set<()=>void>();let channel:RealtimeChannel|null=null;let refreshTimer:ReturnType<typeof setTimeout>;let toastTimer:ReturnType<typeof setTimeout>;let generation=0;let refreshWaiters:(()=>void)[]=[];let refreshing=false;let refreshAgain=false;let realtimeReady=false;let flushing=false;let started=false;let checkingPublic=false;let bootSession:Session|null|undefined;let publicAvailable=false;
+const listeners=new Set<()=>void>();let channel:RealtimeChannel|null=null;let refreshTimer:ReturnType<typeof setTimeout>;let toastTimer:ReturnType<typeof setTimeout>;let generation=0;let refreshPromise:Promise<void>|null=null;let realtimeReady=false;let flushPromise:Promise<void>|null=null;let started=false;let checkingPublic=false;let bootSession:Session|null|undefined;let publicAvailable=false;
 function emit(p:Partial<State>){state={...state,...p};listeners.forEach(l=>l());}
 export function notify(toast:string){clearTimeout(toastTimer);emit({toast});toastTimer=setTimeout(()=>emit({toast:''}),5500);}
 export const getEngine=()=>state;
@@ -67,16 +67,22 @@ async function connect(session:Session){
 }
 function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events','caisse_table_sessions','dipsy_reservations'])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
 export async function refresh(){
+ // Coalesce reads, with at most one follow-up for callers arriving during a read.
+ // Realtime events must never keep an acknowledgement waiting indefinitely.
+ if(refreshPromise)await refreshPromise;
  if(state.mode!=='live'||!state.session)return;
  if(!navigator.onLine){emit({connection:'offline'});return;}
- if(refreshing){refreshAgain=true;return new Promise<void>(resolve=>refreshWaiters.push(resolve));}
- refreshing=true;const gen=generation;const user=state.session.user.id;
- try{
-  const {data,error}=await transport().rpc('caisse_snapshot').abortSignal(AbortSignal.timeout(15000));if(error)throw error;if(!data)throw new Error('ACCESS_DENIED');if(gen!==generation)return;
-  await saveCache(user,data as Snapshot);if(gen!==generation)return;
-  emit({data:data as Snapshot,lastSync:(data as Snapshot).server_time||new Date().toISOString(),connection:state.pending.some(p=>p.status==='queued')?'syncing':realtimeReady?'connected':'connecting',error:''});
- }catch(e){if(gen===generation)emit({connection:navigator.onLine?'error':'offline',error:readableError((e as Error).message)});}
- finally{refreshing=false;if(refreshAgain){refreshAgain=false;await refresh();}for(const done of refreshWaiters.splice(0))done();}
+ if(refreshPromise)return refreshPromise;
+ const gen=generation;const user=state.session.user.id;
+ refreshPromise=(async()=>{
+  try{
+   const {data,error}=await transport().rpc('caisse_snapshot').abortSignal(AbortSignal.timeout(15000));if(error)throw error;if(!data)throw new Error('ACCESS_DENIED');if(gen!==generation)return;
+   await saveCache(user,data as Snapshot);if(gen!==generation)return;
+   const rejected=state.pending.find(p=>p.status!=='queued');const queued=state.pending.some(p=>p.status==='queued');const retryError=queued&&state.error;
+   emit({data:data as Snapshot,lastSync:(data as Snapshot).server_time||new Date().toISOString(),connection:rejected||retryError?'error':queued?'syncing':realtimeReady?'connected':'connecting',error:rejected?readableError(rejected.error||'Une opération doit être corrigée.'):retryError||''});
+  }catch(e){if(gen===generation)emit({connection:navigator.onLine?'error':'offline',error:readableError((e as Error).message)});}
+ })().finally(()=>{refreshPromise=null;});
+ return refreshPromise;
 }
 export async function submit(kind:string,entityId:string,baseVersion:number,payload:Record<string,unknown>):Promise<'confirmed'|'queued'>{
  if(state.pending.some(p=>p.entityId===entityId))throw new Error('Une opération est déjà en attente pour cet élément. Vérifiez la synchronisation.');
@@ -89,26 +95,39 @@ export async function submit(kind:string,entityId:string,baseVersion:number,payl
  return remaining?'queued':'confirmed';
 }
 export async function flush(){
- if(flushing||state.mode!=='live'||!state.session||!navigator.onLine)return;flushing=true;const user=state.session.user.id;const gen=generation;
+ if(flushPromise)return flushPromise;
+ if(state.mode!=='live'||!state.session||!navigator.onLine)return;
+ const user=state.session.user.id;const gen=generation;
  const execute=async()=>{
-  for(const op of [...state.pending].sort((a,b)=>a.createdAt.localeCompare(b.createdAt))){
-   if(op.status!=='queued'||op.actor!==user)continue;
+  // Another tab may have confirmed or rejected an entry while this tab waited.
+  const known=new Set(state.pending.map(p=>p.id));const persisted=await readOperations(user);if(gen!==generation)return;
+  const appended=state.pending.filter(p=>!known.has(p.id)&&!persisted.some(saved=>saved.id===p.id));
+  emit({pending:[...persisted,...appended].sort((a,b)=>a.createdAt.localeCompare(b.createdAt))});
+  const attempted=new Set<string>();
+  while(gen===generation&&navigator.onLine){
+   const op=state.pending.find(p=>p.status==='queued'&&p.actor===user&&!attempted.has(p.id));if(!op)break;attempted.add(op.id);
    try{
-    emit({connection:'syncing'});const {error}=await transport().rpc('caisse_apply_operation',{op:wireOperation(op)}).abortSignal(AbortSignal.timeout(12000));if(error)throw error;
-    // Confirmation precedes removing the outbox entry. A crash before deletion replays the same key.
+    emit({connection:'syncing',error:''});const {error}=await transport().rpc('caisse_apply_operation',{op:wireOperation(op)}).abortSignal(AbortSignal.timeout(12000));if(error)throw error;
+    // Confirmation precedes removing the outbox entry. A crash replays the same key.
     await deleteOperation(user,op.id);if(gen!==generation)return;emit({pending:state.pending.filter(p=>p.id!==op.id)});
    }catch(e){
     if(gen!==generation)return;const err=e as {code?:string;message:string};
     const network=!err.code||err.code.startsWith('08')||['57014','53300','57P01','PGRST000','PGRST001','PGRST002','PGRST003'].includes(err.code);
-    if(network){emit({connection:navigator.onLine?'error':'offline',error:'Confirmation serveur en attente. L’opération sera renvoyée avec le même identifiant.'});break;}
+    if(network){emit({connection:navigator.onLine?'error':'offline',error:'Connexion interrompue. Votre opération est conservée et sera vérifiée automatiquement.'});break;}
     const failed:Operation={...op,status:err.message.includes('VERSION_CONFLICT')?'conflict':'failed',error:err.message};await saveOperation(user,failed);emit({pending:state.pending.map(p=>p.id===op.id?failed:p),connection:'error',error:readableError(err.message)});
    }
   }
  };
- try{if(navigator.locks)await navigator.locks.request(`dipsy-flush-${user}`,execute);else await execute();}
- finally{flushing=false;await refresh();}
+ flushPromise=(async()=>{
+  try{
+   // A suspended tab must not block every other tab forever. Never steal its lock.
+   if(navigator.locks)await navigator.locks.request(`dipsy-flush-${user}`,{signal:AbortSignal.timeout(15000)},execute);else await execute();
+  }catch(e){if(gen===generation){const err=e as Error;emit({connection:'error',error:['AbortError','TimeoutError'].includes(err.name)?'La synchronisation attend un autre onglet. Fermez les autres onglets de caisse puis cliquez sur Vérifier maintenant.':`Impossible de lire la file locale : ${err.message}`});}}
+  finally{await refresh();}
+ })().finally(()=>{flushPromise=null;});
+ return flushPromise;
 }
-export async function dismissOperation(id:string){if(!state.session)return;const op=state.pending.find(p=>p.id===id);if(!op||op.status==='queued')throw new Error('Une opération sans confirmation ne peut pas être supprimée. Reconnectez-vous pour vérifier son état.');await deleteOperation(state.session.user.id,id);emit({pending:state.pending.filter(p=>p.id!==id)});await refresh();}
+export async function dismissOperation(id:string,onArchived?:()=>void){if(!state.session)return;const op=state.pending.find(p=>p.id===id);if(!op||op.status==='queued')throw new Error('Une opération sans confirmation ne peut pas être supprimée. Reconnectez-vous pour vérifier son état.');await archiveOperation(state.session.user.id,op);onArchived?.();emit({pending:state.pending.filter(p=>p.id!==id)});await refresh();}
 export function enterDemo(){if(state.pending.some(p=>p.status==='queued')){notify('Synchronisez les opérations en attente avant de changer de mode.');return;}++generation;channel?.unsubscribe();channel=null;emit({mode:'demo',session:null,publicAccess:false,role:'admin',data:demoSnapshot(),pending:[],connection:'connected',error:'',lastSync:null});}
 export async function logout(){if(state.pending.some(p=>p.status==='queued'))throw new Error('Des opérations attendent encore la confirmation du serveur. Synchronisez avant de vous déconnecter.');const user=state.session?.user.id;if(user){await clearCache(user);localStorage.removeItem(`dipsy-role-${user}`);}++generation;channel?.unsubscribe();channel=null;await supabase.auth.signOut();emit({mode:'login',session:null,publicAccess:false,role:null,data:emptySnapshot(),pending:[],error:'',connection:'connecting'});}
 export function leaveDemo(){if(publicAvailable){void connectPublic();return;}void bootstrap();}

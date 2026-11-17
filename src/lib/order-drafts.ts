@@ -1,5 +1,5 @@
-import type {Line,Order,Snapshot} from './domain';
-export interface Draft {id:string;version:number;table_id:string;client_id:string;label:string;lines:Line[];status:'open'|'due';edited:boolean;revision:number;submitted?:boolean;sentRevision?:number}
+import type {Line,Order,Snapshot,Operation} from './domain';
+export interface Draft {id:string;version:number;table_id:string;client_id:string;label:string;lines:Line[];status:'open'|'due';edited:boolean;revision:number;saveError?:string;submitted?:boolean;sentRevision?:number}
 export interface DraftBook {selected:string;drafts:Record<string,Draft>}
 export const freshDraft=(table_id=''):Draft=>({id:crypto.randomUUID(),version:0,table_id,client_id:'',label:'',lines:[],status:'open',edited:false,revision:0});
 export function orderDraft(s:Snapshot,o:Order):Draft{return {id:o.id,version:o.version,table_id:o.table_id||'',client_id:o.client_id||'',label:o.label,lines:s.lines.filter(l=>l.order_id===o.id),status:o.status==='due'?'due':'open',edited:false,revision:0};}
@@ -13,3 +13,12 @@ export function readDraftBook(key:string,legacyKey?:string):DraftBook{
  const d=freshDraft();return {selected:d.id,drafts:{[d.id]:d}};
 }
 export function writeDraftBook(key:string,book:DraftBook){localStorage.setItem(key,JSON.stringify(book));}
+
+// A queue entry can disappear before the post-write snapshot arrives. Keep the
+// sent marker through that gap so our own acknowledgement is not a conflict.
+export function reconcileDraft(draft:Draft,snapshot:Snapshot,pending:Operation[]):Draft{
+ const order=snapshot.orders.find(o=>o.id===draft.id);
+ if(!order||order.version===draft.version||pending.some(p=>p.entityId===draft.id)||draft.edited&&!draft.submitted)return draft;
+ const confirmed=orderDraft(snapshot,order);
+ return draft.edited?acknowledgeDraft(draft,{...draft,revision:draft.sentRevision??draft.revision},confirmed):confirmed;
+}

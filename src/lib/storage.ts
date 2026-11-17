@@ -8,3 +8,15 @@ export const deleteOperation=(user:string,id:string)=>transaction(user,'operatio
 export const readCache=(user:string)=>transaction<Snapshot|undefined>(user,'cache','readonly',s=>s.get('snapshot'));
 export const saveCache=(user:string,snapshot:Snapshot)=>transaction(user,'cache','readwrite',s=>s.put(snapshot,'snapshot'));
 export const clearCache=(user:string)=>transaction(user,'cache','readwrite',s=>s.clear());
+
+// Archive a definite rejection and remove it from the active queue atomically.
+// Unknown/queued operations are never eligible for this recovery path.
+export async function archiveOperation(user:string,op:Operation){
+ if(op.status==='queued')throw new Error('Une opération sans confirmation doit être vérifiée avant de reprendre.');
+ const db=await open(user);await new Promise<void>((resolve,reject)=>{
+  const tx=db.transaction(['operations','cache'],'readwrite');
+  tx.objectStore('cache').put(op,`rejected:${op.id}`);tx.objectStore('operations').delete(op.id);
+  tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+ });
+}
+export const readArchivedOperation=(user:string,id:string)=>transaction<Operation|undefined>(user,'cache','readonly',s=>s.get(`rejected:${id}`));

@@ -71,3 +71,12 @@ Parcours de démonstration vérifiés dans le navigateur aux formats 320 × 568,
 Entre 701 et 950 px, la carte occupe toute la largeur disponible avec trois colonnes de produits, et le ticket s’ouvre dans un panneau de 420 px avec de grands boutons. La sélection d’une table ouvre ce panneau ; un bouton fixe permet de retrouver le ticket. À partir de 951 px, la carte et le ticket sont affichés côte à côte. Les champs restent lisibles à 16 px dans le mode portrait compact.
 
 Contrôle dans le navigateur à 768 × 1024 et 1024 × 768 : ouverture de Table 06, quantité de burrata de 2 à 3, enregistrement à 134 €, rotation en paysage, versement CB de 49 €, puis rotation en portrait. La même fenêtre affiche 49 € déjà encaissés et 85 € restants, avec l’historique et les boutons accessibles. Les 16 tests applicatifs et la compilation réussissent ; les contrôles PostgreSQL sont aussi exécutés par la publication automatique. Ces essais utilisent les formats iPad dans le navigateur et des données fictives.
+
+
+## Reprise des tickets bloqués — 17 novembre 2026
+
+Le ticket différencie une réponse réseau inconnue d’un refus explicite PostgreSQL. Une réponse inconnue reste dans la file et se vérifie avec le même identifiant ; aucune suppression ni nouvelle clé de paiement n’est autorisée. Un refus affiche sa cause et une action de reprise sur le ticket, le règlement ou la table. La tentative refusée est archivée dans le magasin IndexedDB `cache` (`rejected:<id>`) avant son retrait atomique de la file. Les archives restent propres à l’appareil.
+
+Le sélecteur des nouveaux tickets indépendants propose les clients propres à Caisse ; un ancien ticket refusé pour association à un client de réservation peut reprendre sans cette association, en conservant ses articles. Les refus d’autosauvegarde attendent une correction utilisateur avant un nouvel envoi.
+
+Sept régressions moteur supplémentaires couvrent le refus persistant, le conflit sans écrasement, la réponse de paiement perdue, les envois simultanés, le verrou d’un autre onglet, la rafale Realtime et la confirmation reçue dans un autre onglet. `npm run check` : 28 tests applicatifs et 61 vérifications PostgreSQL, restauration comprise.

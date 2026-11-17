@@ -4,6 +4,7 @@ import type {Order} from '../lib/domain';
 import {euro,decimal,parseCents,orderBalance,orderTotal,orderPaid,orderLabel,readableError} from '../lib/domain';
 import {useEngine,submit,notify,refresh,flush} from '../lib/engine';
 import {Modal} from './Common';
+import OperationNotice from './OperationNotice';
 import PaymentRecap,{PaymentBreakdown} from './PaymentRecap';
 
 export default function PaymentModal({order,onClose}:{order:Order;onClose:()=>void}){
@@ -64,6 +65,7 @@ export default function PaymentModal({order,onClose}:{order:Order;onClose:()=>vo
    <PaymentBreakdown data={data} orderId={current.id}/>
   </div>
   {settled&&<div className="payment-complete" role="status"><CheckCircle2 size={21}/><span>Tout est réglé. Retrouvez le détail de l’addition et des encaissements ci-dessous.</span></div>}
+  {operation&&<OperationNotice operation={operation} onResolved={()=>{setAttempt(null);setError('');setNotice('Vérifiez le solde confirmé avant de saisir un autre versement.');}}/>}
   {!closed&&<>
    {notice&&!attempt&&<p className="payment-confirmation" role="status"><CheckCircle2 size={16}/>{notice} Vous pouvez saisir le versement suivant.</p>}
    <form onSubmit={e=>{e.preventDefault();void pay();}}>
@@ -78,7 +80,7 @@ export default function PaymentModal({order,onClose}:{order:Order;onClose:()=>vo
     {(error||operation||(!attempt&&stale))&&<div className="form-error" role="alert">{error||(operation?(operation.status==='queued'?'Un versement ou une modification attend la confirmation du serveur. Le solde affiché comprend uniquement les règlements confirmés.':'Une opération a été refusée. Consultez la synchronisation pour la résoudre.'):'La commande a été modifiée sur un autre appareil. Vérifiez le nouveau solde avant de continuer.')}
      {!operation&&!attempt&&stale&&<button type="button" className="btn secondary full" onClick={()=>{setAcceptedVersion(current.version);setAmount(decimal(balance));setCash('');setError('');}}>Utiliser le solde actualisé</button>}
     </div>}
-    <button type="submit" className="btn primary full" disabled={!valid||locked}>{busy?'Confirmation en cours…':attempt||operation?'Confirmation attendue…':`Encaisser ${valid?euro(cents):'le versement'}`}<ArrowRight size={17}/></button>
+    <button type="submit" className="btn primary full" disabled={!valid||locked}>{busy?'Confirmation en cours…':attempt||operation?(operation&&operation.status!=='queued'?'Opération à corriger…':'Confirmation attendue…'):`Encaisser ${valid?euro(cents):'le versement'}`}<ArrowRight size={17}/></button>
    </form>
    {attempt&&!busy&&<div className="payment-pending" role="status"><p>{euro(attempt.amount)} en cours de vérification. Le solde sera mis à jour à réception des règlements confirmés.</p><button type="button" className="btn secondary full" onClick={()=>void flush().then(refresh)}><RefreshCw size={15}/>Vérifier la confirmation</button></div>}
    <p className="payment-note"><LockKeyhole size={13}/> {mode==='demo'?'Simulation locale · aucun paiement réel':'Le règlement CB doit être effectué sur votre terminal bancaire.'}</p>

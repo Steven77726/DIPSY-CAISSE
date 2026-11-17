@@ -10,7 +10,7 @@ import OperationNotice from './OperationNotice';
 import {independentTable,tableState,currentSession} from '../lib/table-room';
 import {freshDraft,orderDraft,readDraftBook,writeDraftBook,acknowledgeDraft,reconcileDraft} from '../lib/order-drafts';
 import type {Draft,DraftBook} from '../lib/order-drafts';
-export const categoryIcons={entrees:Salad,plats:UtensilsCrossed,desserts:CakeSlice,boissons:Coffee,alcool:Wine};
+export const categoryIcons={entrees:Salad,plats:UtensilsCrossed,desserts:CakeSlice,boissons:Coffee,alcool:Wine,vins:Wine,cocktails:Wine};
 export default function Commands({onPay,onProduct,onSettings,reservationOrderId,visible=true}:{visible?:boolean;reservationOrderId?:string;onPay:(o:Order)=>void;onProduct:()=>void;onSettings:()=>void}){
  const {data,role,mode,session,pending}=useEngine();
  const scope=`${mode}-${session?.user.id||'demo'}${reservationOrderId?'-'+reservationOrderId:''}`;
@@ -43,7 +43,7 @@ export default function Commands({onPay,onProduct,onSettings,reservationOrderId,
  const active=data.orders.filter(o=>['open','due'].includes(o.status));const shown=active.filter(o=>filter==='all'||o.status===filter);
  const localDrafts=Object.values(book.drafts).filter(d=>!d.table_id&&d.lines.length&&!data.orders.some(o=>o.id===d.id));
  const total=draft.lines.reduce((n,l)=>n+l.quantity*l.unit_price_cents,0);const vat=draft.lines.reduce((n,l)=>{const t=l.quantity*l.unit_price_cents;return n+t-netCents(t,l.vat_bps);},0);
- const products=data.products.filter(p=>p.active&&(category==='all'||p.category===category)&&p.name.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')));
+ const products=data.products.filter(p=>p.active&&(category==='all'||p.category===category)&&p.name.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr'))).sort((a,b)=>{const order=JSON.parse(localStorage.getItem('dipsy-product-order')||'[]') as string[];return (order.indexOf(a.id)<0?9999:order.indexOf(a.id))-(order.indexOf(b.id)<0?9999:order.indexOf(b.id));});
  function fromOrder(o:Order){put(orderDraft(getEngine().data,o),true);setError('');}
  function selectOrder(o:Order){const cached=bookRef.current.drafts[o.id];put(cached?.edited?cached:orderDraft(getEngine().data,o),true);setError('');setMobileTicket(true);}
  function selectTable(t:Table){const state=getEngine();const current=tableState(state.data,t.id);if(current.order){selectOrder(current.order);return;}

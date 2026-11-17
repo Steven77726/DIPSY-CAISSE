@@ -43,3 +43,9 @@ Aperçu vérifié dans le navigateur : commandes, ticket existant, encaissement 
 Les deux boutons « Nouvelle commande » ouvrent un formulaire de table/commande libre. Fermer le formulaire conserve le ticket précédent. Un brouillon non envoyé est signalé avant remplacement. Sur mobile, la confirmation ouvre le ticket avec un bouton « Ajouter des produits » pour revenir à la carte.
 
 Parcours contrôlé dans le navigateur : choix de Table 01, ajout d’un produit, quantité de 1 à 2, ouverture puis fermeture du second bouton « + » avec conservation du brouillon, enregistrement, modification de quantité et nouvel enregistrement. Les articles et totaux restent visibles après confirmation grâce au chargement du dernier instantané reçu. Contrôle complémentaire en 390 × 844 : commande libre nommée, ticket ouvert et bouton d’ajout visible. Toutes les commandes de ce parcours utilisent la démonstration locale.
+
+## Passerelle — 17 novembre 2026
+
+14 tests applicatifs, 20 contrôles caisse historiques, 14 contrôles PostgreSQL de passerelle (dont restauration des quinze tables) et 7 tests de migration Tables réussis. Les exemples d’exports utilisent une heure de référence fixe pour rester vérifiables après minuit à Paris.
+
+Le parcours navigateur isolé a vérifié deux homonymes, une migration confirmée, l’ouverture de la seconde réservation avec son téléphone, sa date et sa table, la conservation de la même commande après réouverture, un article enregistré, les corrections dans les deux sens et la conservation d’une saisie pendant une correction concurrente. Les origines et données de test restent distinctes des applications réelles. La migration réelle des données locales doit être confirmée sur les appareils du restaurant.

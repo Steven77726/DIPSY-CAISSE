@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run test:database
+      - run: npm run test:bridge
       - run: npm run build
   build:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

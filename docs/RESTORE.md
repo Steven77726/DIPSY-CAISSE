@@ -27,3 +27,9 @@ Ce test valide les invariants de restauration des données de la caisse, **pas**
 7. Reconnecter les appareils un à un. Vérifier chaque opération inconnue avec **son identifiant d’origine** ; ne jamais remplacer les identifiants d’une file issue d’avant l’incident. Traiter explicitement les opérations qui étaient postérieures au point restauré.
 
 Objectifs de reprise à définir après choix de la sauvegarde : le workflow quotidien seul donne un point de reprise pouvant dater de 24 heures. Ce n’est pas une garantie de perte nulle.
+
+## Avec la passerelle de réservation
+
+Le périmètre courant comporte **quinze tables** : les dix tables caisse initiales, `caisse_reservation_cases`, `dipsy_tables_state`, `dipsy_reservations`, `dipsy_tables_imports` et `dipsy_bridge_operations`. Les scripts incluent les deux préfixes applicatifs. La source, la projection, les fiches et les clés d’opération doivent rester cohérentes. `npm run test:bridge` restaure ces quinze tables dans une seconde base isolée, vérifie leurs effectifs puis rejoue un paiement et l’ouverture d’une réservation sans créer de doublon. Les identités Auth sont toujours une dépendance de la restauration.
+
+Les anciennes copies des appareils sont conservées avant la première migration. Si la version serveur recule après restauration, Tables demande une comparaison avec la copie locale ; il ne la remplace pas automatiquement. Voir [la procédure de passerelle](RESERVATION-BRIDGE.md).

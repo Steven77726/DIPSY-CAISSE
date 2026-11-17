@@ -5,6 +5,7 @@ import {emptySnapshot,readableError} from './domain';
 import {supabase,publicSupabase} from './supabase';
 import {readCache,saveCache,readOperations,saveOperation,deleteOperation,clearCache} from './storage';
 import {demoSnapshot,applyDemo,demoActor} from './demo';
+import {reservationLink,startReservationHandoff,restoreAuthReservation} from './reservation-link';
 type Connection='connecting'|'connected'|'syncing'|'offline'|'error';
 interface State {mode:'loading'|'login'|'live'|'demo';session:{user:{id:string;email?:string}}|null;publicAccess:boolean;role:Role|null;data:Snapshot;pending:Operation[];connection:Connection;error:string;lastSync:string|null;toast:string}
 let state:State={mode:'loading',session:null,publicAccess:false,role:null,data:emptySnapshot(),pending:[],connection:navigator.onLine?'connecting':'offline',error:'',lastSync:null,toast:''};
@@ -29,6 +30,11 @@ async function connectPublic(){
 }
 async function bootstrap(){
  checkingPublic=true;
+ if(reservationLink().requested){
+  const response=await supabase.auth.getSession();const session=bootSession||response.data.session;checkingPublic=false;
+  if(session)await connect(session);else emit({mode:'login',session:null,publicAccess:false,role:null,error:reservationLink().id?'Connectez-vous pour ouvrir cette réservation sécurisée.':'Identifiant de réservation invalide.'});
+  return;
+ }
  try{
   let enabled=false;
   if(navigator.onLine){const {data,error}=await publicSupabase.rpc('caisse_public_access').abortSignal(AbortSignal.timeout(10000));if(error)throw error;enabled=data===true;localStorage.setItem('dipsy-caisse-public-enabled',String(enabled));}
@@ -56,7 +62,7 @@ async function connect(session:Session){
   subscribe();await refresh();await flush();
  }catch(e){if(gen!==generation)return;emit({mode:'login',role:null,error:(e as Error).message,connection:'error'});}
 }
-function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events'])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
+function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events',...(state.publicAccess?[]:['dipsy_reservations'])])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
 export async function refresh(){
  if(state.mode!=='live'||!state.session)return;
  if(!navigator.onLine){emit({connection:'offline'});return;}
@@ -104,8 +110,9 @@ export function enterDemo(){if(state.pending.some(p=>p.status==='queued')){notif
 export async function logout(){if(state.pending.some(p=>p.status==='queued'))throw new Error('Des opérations attendent encore la confirmation du serveur. Synchronisez avant de vous déconnecter.');const user=state.session?.user.id;if(user){await clearCache(user);localStorage.removeItem(`dipsy-role-${user}`);}++generation;channel?.unsubscribe();channel=null;await supabase.auth.signOut();emit({mode:'login',session:null,publicAccess:false,role:null,data:emptySnapshot(),pending:[],error:'',connection:'connecting'});}
 export function leaveDemo(){if(publicAvailable){void connectPublic();return;}void bootstrap();}
 export function startEngine(){if(started)return;started=true;checkingPublic=true;
+ restoreAuthReservation();startReservationHandoff(tokens=>supabase.auth.setSession(tokens));
  supabase.auth.onAuthStateChange((event,session)=>{bootSession=session;if(checkingPublic||state.publicAccess)return;if(event==='TOKEN_REFRESHED'){void refresh();return;}if(session){if(state.session?.user.id!==session.user.id||state.mode!=='live')setTimeout(()=>void connect(session),0);}else if(state.mode!=='demo'){++generation;channel?.unsubscribe();channel=null;emit({mode:'login',session:null,publicAccess:false,role:null,data:emptySnapshot(),pending:[]});}});
- if(new URLSearchParams(location.search).get('demo')==='1'){checkingPublic=false;enterDemo();}else void bootstrap();
+ if(!reservationLink().requested&&new URLSearchParams(location.search).get('demo')==='1'){checkingPublic=false;enterDemo();}else void bootstrap();
  window.addEventListener('offline',()=>{if(state.mode==='live')emit({connection:'offline'});});
  window.addEventListener('online',()=>{if(state.mode==='live'){subscribe();void refresh().then(flush);}else if(state.mode==='login'&&!state.session)void bootstrap();});
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.mode==='live')void refresh().then(flush);});

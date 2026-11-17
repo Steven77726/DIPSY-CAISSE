@@ -24,3 +24,5 @@
 
 .mobile-add-products{display:none}
 @media(max-width:700px){.mobile-add-products{display:flex;margin-top:16px;font-size:12px}}
+
+[hidden]{display:none!important}.reservation-panel{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:24px;padding:22px;background:#eef3e7;border:1px solid #dce5d0;border-radius:12px}.reservation-panel h2{font-size:24px;margin:8px 0}.reservation-panel p{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}.reservation-panel small{font-size:10px;color:#6d7b60}.reservation-panel .eyebrow{font-size:10px}.reservation-panel .btn{flex-shrink:0}@media(max-width:700px){.reservation-panel{display:block;padding:16px}.reservation-panel .btn{margin-top:14px}.reservation-panel h2{font-size:22px}}

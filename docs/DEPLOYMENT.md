@@ -50,3 +50,7 @@ Ouvrir l’URL canonique dans Safari puis utiliser **Partager → Sur l’écran
 ## Retour à une version précédente
 
 Réutiliser un commit précédemment validé, le faire repasser par les contrôles et publier. Ne jamais restaurer automatiquement un schéma partagé pour revenir à une ancienne version de l’interface. Conserver la compatibilité des RPC et des versions de données.
+
+## Passerelle et appareils existants
+
+La liaison avec Dipsy Tables ajoute une migration additive et un accès authentifié aux fiches liées. Elle ne migre pas automatiquement les données privées des navigateurs du restaurant. Suivre [le guide de première activation](RESERVATION-BRIDGE.md) sur chaque appareil/profil existant. Ne pas supprimer leurs données locales et ne pas utiliser simultanément un ancien onglet avant migration et la nouvelle version.

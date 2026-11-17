@@ -41,6 +41,10 @@ Les indicateurs de CA et de TVA du tableau de bord reposent sur la **date des en
 
 Le CSV contient le journal détaillé des encaissements. Le vrai classeur `.xlsx` contient Synthèse, Commandes, Lignes, Règlements et Ventilation TVA. Les commandes/lignes sont filtrées sur la création de commande et les règlements sur leur date de réception ; les onglets explicitent cette différence. Les taux restent choisis explicitement par produit. [Règles officielles de TVA](https://entreprendre.service-public.gouv.fr/vosdroits/F22399).
 
+## Passerelle Dipsy Tables
+
+Le bouton **CAISSE** de chaque réservation ouvre sa fiche par UUID stable. Les informations de réservation font autorité dans l’état Dipsy Tables versionné sur Supabase. Les fiches liées exigent une authentification, même si la caisse sans réservation reste ouverte. Les données locales des anciens appareils doivent être migrées et vérifiées avant activation sur chacun d’eux. [Procédure, droits, conflits et restauration](docs/RESERVATION-BRIDGE.md).
+
 ## Exploitation
 
 - [Mise en service et déploiement](docs/DEPLOYMENT.md)

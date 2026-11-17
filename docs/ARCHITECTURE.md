@@ -14,7 +14,7 @@ Une mutation attend la validation de l’écriture IndexedDB. La RPC prend un ve
 
 Les événements Postgres Realtime déclenchent un rafraîchissement cohérent par une RPC de lecture MVCC. La reconnexion réseau, le retour au premier plan et un contrôle périodique reprennent la file. Les conflits restent conservés jusqu’à résolution explicite. Un brouillon rejeté peut être consulté avant abandon ; une opération dont le résultat est inconnu ne peut pas être abandonnée.
 
-La future connexion à Dipsy Tables dispose de `caisse_tables.external_table_id` et `caisse_orders.external_reservation_id`. Aucun lien avec ses tables n’est encore actif ; le partage du projet n’implique aucun droit automatique entre applications.
+Le schéma initial préparait la connexion à Dipsy Tables avec `caisse_tables.external_table_id` et `caisse_orders.external_reservation_id`. La migration de passerelle ajoute quatre tables de source/journal et `caisse_reservation_cases`, des UUID et clés étrangères composites. [Le guide de passerelle](RESERVATION-BRIDGE.md) définit la source de vérité et l’activation après migration sur les appareils. Aucun droit n’est accordé sur l’ancien projet.
 
 ## Limites connues
 

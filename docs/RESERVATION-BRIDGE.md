@@ -8,27 +8,23 @@ Chaque réservation conserve son UUID d’origine, également enregistré sous `
 
 `caisse_reservation_cases.reservation_id` est une clé primaire et une clé étrangère. Le client et la commande sont uniques et rattachés par des clés étrangères composites à la même réservation. Ouvrir deux fois ou simultanément la même réservation retourne la même fiche, le même client et la même commande. Deux homonymes possédant deux UUID gardent deux fiches distinctes.
 
-## Première activation sur les appareils existants
+## Accès libre et reprise des appareils
 
-Les réservations existantes sont dans les navigateurs des appareils, et non dans le projet Supabase actuel. L’ancienne configuration du dépôt pointait vers `vkkkpijncevbwzvopctp`, inaccessible lors de la préparation. La nouvelle passerelle utilise `wseewiaaygyzkalpslee` ; elle n’écrit pas dans l’ancien projet.
+À la demande explicite du propriétaire, les deux applications utilisent désormais un accès libre, y compris aux réservations, clients et encaissements liés. Toute personne ayant le lien peut consulter et modifier ces données. Le rôle technique public existant enregistre les opérations sans créer de mot de passe partagé ni exposer de clé secrète.
 
-Sur **chaque appareil et profil de navigateur contenant des réservations** :
+`caisse_runtime.bridge_public_access` active la passerelle libre uniquement si `public_access` est aussi actif. Les écritures directes REST restent interdites par les privilèges et RLS ; les RPC contrôlent les versions, clés d’opération, contraintes et clôtures. Les accès de l’équipe restent modifiables uniquement par un véritable administrateur authentifié.
 
-1. Fermer les anciens onglets Dipsy Tables, puis ouvrir l’URL habituelle dans le même navigateur. Ne pas effacer ses données ni changer d’origine. Si le nombre de réservations est inattendu, ne pas confirmer la migration.
-2. Cliquer **Connexion sécurisée** et utiliser une adresse confirmée figurant dans la liste d’accès Dipsy. Le choix Steven/Naty du service n’accorde aucun droit. Pour le premier compte, **Première connexion : créer mon accès**, confirmer l’e-mail puis revenir se connecter. Le propriétaire choisit son mot de passe lui-même.
-3. Cliquer **Préparer la migration**. La migration exige le rôle administrateur. Vérifier le nombre de réservations locales et partagées, puis télécharger la copie de secours proposée.
-4. Si le même UUID comporte des versions différentes, choisir explicitement celle à conserver. Les UUID distincts sont réunis ; une réservation supprimée n’est pas rétablie automatiquement par une ancienne copie.
-5. Confirmer. L’application conserve la copie locale d’origine, les notes et l’historique ; le serveur conserve aussi le snapshot importé. Le bouton CAISSE devient opérationnel après la confirmation serveur. Répéter sur les autres appareils avant d’utiliser exclusivement l’état partagé.
+Sur chaque ancien appareil, ouvrir l’URL habituelle de Dipsy Tables sans effacer les données. La copie d’origine est conservée avant la migration. Les UUID distincts sont réunis automatiquement et le serveur conserve un snapshot immuable de l’import. Les variantes du même UUID et la réapparition d’une réservation supprimée demandent un choix explicite. Aucun identifiant absent ou dupliqué n’est inventé silencieusement. « Copie de secours » permet de télécharger les données d’origine.
 
-Une sauvegarde JSON locale illisible déclenche un mode de lecture seule et permet de télécharger les données brutes. L’application ne remplace pas cette sauvegarde par une liste vide. Un manque d’espace local ou une erreur de migration bloque l’activation.
+Le bouton CAISSE ouvre `https://steven77726.github.io/DIPSY-CAISSE/?reservation_id=<UUID>` sans connexion lorsque le mode libre est activé. Les données proviennent du serveur, sans nom ni téléphone dans le lien. Aucun doublon de fiche n’est créé à la réouverture.
 
-## Ouverture et connexion
+## Articles et état des paiements
 
-Le bouton **CAISSE**, présent dans le titre de chaque fiche de réservation, ouvre `https://steven77726.github.io/DIPSY-CAISSE/?reservation_id=<UUID>`. Aucun nom, téléphone, date, jeton ou mot de passe ne figure dans le lien. Les informations préremplies proviennent du serveur après vérification des droits.
+« Articles & prix » dans Tables, ou « Gérer la carte » dans Caisse, modifie le nom, la référence, le prix, la TVA, la catégorie, le groupe comptable et la disponibilité. La TVA n’est jamais déduite d’une catégorie. Chaque nouvel article ajouté à un ticket prend une copie de ces informations ; les tickets existants conservent leur prix historique et leur référence.
 
-Si le nouvel onglet conserve son lien avec Dipsy Tables, la session peut être transmise par `postMessage` : origine exacte, fenêtre émettrice, UUID et nonce uniques sont contrôlés, la réponse est acceptée une seule fois et l’écoute expire après 30 secondes. Les jetons ne figurent jamais dans une URL ou un journal. Si le navigateur isole les onglets, Dipsy Caisse demande une connexion normale ; la réservation reste désignée par son UUID.
+« ARTICLES » sur une réservation ouvre son ticket exact. « Corriger » permet de changer l’article, le nom, la quantité ou le prix avant tout règlement. Caisse propose aussi la correction de référence, TVA et groupe sur le ticket. `correct_line` est une opération explicite avec UUID, version, verrou commun aux règlements et journal avant/après. Toute correction est refusée après le premier versement ou la clôture ; elle ne change jamais rétroactivement la répartition comptable d’un encaissement.
 
-La caisse libre reste disponible pour les commandes sans réservation. Les réservations liées, clients, tables associées, articles, paiements et journaux correspondants sont exclus des lectures anonymes. Une personne authentifiée doit aussi avoir une adresse confirmée et un accès actif. Les mutations directes REST restent interdites.
+Le plan et les fiches utilisent un snapshot confirmé, indexé par `reservation_id`. Solde intégralement payé et statut `paid` : vert ; commande vide, absente, en cours ou partielle : rouge clair ; état inconnu, erreur ou hors ligne : gris. Les événements Realtime déclenchent une relecture, complétée par une vérification périodique. Une correction non confirmée ne devient pas un résultat enregistré.
 
 ## Corrections et conflits
 
@@ -40,14 +36,18 @@ Les opérations envoyées gardent leur identifiant en cas de réponse perdue. Ta
 
 ## Déploiement, sauvegarde et reprise
 
-La migration additive est `supabase/migrations/20261116225040_reservation_bridge.sql`. Elle s’applique après le schéma caisse et l’activation publique existants. Elle ne contient aucune réservation réelle ni adresse d’administrateur.
+Appliquer, dans cet ordre : `20261116225040_reservation_bridge.sql`, `20261117103425_article_corrections.sql`, puis `20261117114608_bridge_free_access.sql`. La dernière migration laisse le nouvel accès désactivé jusqu’à son activation explicite dans `caisse_runtime`. Elle s’applique après le schéma caisse et l’activation publique existants. Elle ne contient aucune réservation réelle ni adresse d’administrateur.
 
 Les quinze tables caisse/passerelle, leurs clés d’opération et les identités Auth correspondantes doivent être restaurées ensemble. Les scripts de sauvegarde incluent les quatre tables `dipsy_*` de la passerelle et toutes les tables `caisse_*`. La sauvegarde nocturne reste à configurer ; les tests de restauration isolée ne constituent pas une sauvegarde de production.
 
-Pour suspendre la liaison, désactiver les accès de l’équipe dans `caisse_access` et conserver les données et files locales. Ne pas supprimer ou réattribuer les UUID et ne pas restaurer une ancienne interface qui réactive l’ancienne synchronisation globale. Restaurer d’abord sur une base isolée, contrôler les quinze tables et rejouer une ancienne clé de paiement avant la reprise.
+Pour suspendre l’accès libre à la liaison, mettre `bridge_public_access=false` dans `caisse_runtime` ; pour fermer aussi la caisse libre, mettre `public_access=false`. Désactiver seulement les accès de l’équipe dans `caisse_access` ne ferme pas le mode public. Toujours et conserver les données et files locales. Ne pas supprimer ou réattribuer les UUID et ne pas restaurer une ancienne interface qui réactive l’ancienne synchronisation globale. Restaurer d’abord sur une base isolée, contrôler les quinze tables et rejouer une ancienne clé de paiement avant la reprise.
 
 ## Vérifications
 
 Tests PostgreSQL : authentification et droits, anonymat refusé malgré la caisse libre, migration sans perte, homonymes, unicité et réouverture, corrections bidirectionnelles, conflits, suppression conservée, paiement mixte rejoué une seule fois et restauration des quinze tables. Tests de migration côté Tables : UUID stables, sauvegarde non mutée, identifiant absent/dupliqué, homonymes et fusion de trois versions. Tests de session : origine, fenêtre, nonce et réponse unique.
 
 Parcours navigateur réalisé avec une base PostgreSQL et des comptes **fictifs isolés** : deux homonymes, migration, ouverture de la bonne fiche, commande, correction dans chaque sens et saisie concurrente conservée. La première confirmation d’e-mail réelle et la migration des navigateurs du restaurant restent des actions à effectuer sur ces appareils.
+
+## Validation des évolutions
+
+14 contrôles PostgreSQL supplémentaires vérifient corrections, référence, TVA, versions concurrentes, clés rejouées, protections après paiement, activation et fermeture du mode libre. Tests Tables : paiement partiel, solde, UUID distincts et état sans confirmation. Parcours navigateur sur données fictives : fiche complète modifiée, ticket corrigé, ouverture sans compte, règlement final et changement automatique de couleur. Les réservations encore locales sur les appareils du restaurant ne sont présentes sur Supabase qu’après leur première ouverture avec cette version.

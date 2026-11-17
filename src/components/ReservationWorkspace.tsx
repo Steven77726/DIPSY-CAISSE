@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';
 import {Pencil,ArrowRight,RefreshCw,CalendarDays,Phone} from 'lucide-react';
 import type {Order} from '../lib/domain';
 import {useEngine,refresh,notify,submit,dismissOperation} from '../lib/engine';
-import {supabase} from '../lib/supabase';
+import {supabase,publicSupabase} from '../lib/supabase';
 import {reservationLink} from '../lib/reservation-link';
 import Commands from './Commands';
 import {Modal} from './Common';
@@ -10,11 +10,11 @@ interface Reservation {reservation_id:string;visit_date:string;table_label:strin
 interface CaseInfo {reservation:Reservation;case:{reservation_id:string;client_id:string;order_id:string}}
 interface Edit {name:string;phone:string;visit_date:string;table_ref:string;baseVersion:number}
 export default function ReservationWorkspace(props:{onPay:(o:Order)=>void;onProduct:()=>void;onSettings:()=>void}){
- const {data,pending}=useEngine();const {id}=reservationLink();const [info,setInfo]=useState<CaseInfo|null>(null);const [error,setError]=useState('');const [edit,setEdit]=useState<Edit|null>(null);const [busy,setBusy]=useState(false);const [tables,setTables]=useState<Record<string,{label:string}>>({});
+ const {data,pending,publicAccess}=useEngine();const bridgeClient=publicAccess?publicSupabase:supabase;const {id}=reservationLink();const [info,setInfo]=useState<CaseInfo|null>(null);const [error,setError]=useState('');const [edit,setEdit]=useState<Edit|null>(null);const [busy,setBusy]=useState(false);const [tables,setTables]=useState<Record<string,{label:string}>>({});
  const waiting=pending.find(p=>p.entityId===id);
  const orderVersion=data.orders.find(o=>o.id===info?.case.order_id)?.version;
- async function loadSource(){if(!id)return;const {data:r,error:e}=await supabase.from('dipsy_reservations').select('*').eq('reservation_id',id).single();if(e)throw e;setInfo(old=>old?{...old,reservation:{...r,visit_date:String(r.visit_date).slice(0,10)} as Reservation}:old);}
- useEffect(()=>{let active=true;if(!id){setError('Identifiant de réservation invalide.');return;}void(async()=>{try{const {data:r,error:e}=await supabase.rpc('dipsy_bridge_operation',{op:{id:crypto.randomUUID(),kind:'open',baseVersion:0,payload:{reservation_id:id}}});if(e)throw e;await refresh();if(active)setInfo(r as CaseInfo);const {data:s,error:se}=await supabase.rpc('dipsy_tables_snapshot');if(se)throw se;if(active)setTables(s.payload._bridge?.tables||{});}catch(e){if(active)setError(message(e));}})();return()=>{active=false;};},[id]);
+ async function loadSource(){if(!id)return;const {data:r,error:e}=await bridgeClient.from('dipsy_reservations').select('*').eq('reservation_id',id).single();if(e)throw e;setInfo(old=>old?{...old,reservation:{...r,visit_date:String(r.visit_date).slice(0,10)} as Reservation}:old);}
+ useEffect(()=>{let active=true;if(!id){setError('Identifiant de réservation invalide.');return;}void(async()=>{try{const {data:r,error:e}=await bridgeClient.rpc('dipsy_bridge_operation',{op:{id:crypto.randomUUID(),kind:'open',baseVersion:0,payload:{reservation_id:id}}});if(e)throw e;await refresh();if(active)setInfo(r as CaseInfo);const {data:s,error:se}=await bridgeClient.rpc('dipsy_tables_snapshot');if(se)throw se;if(active)setTables(s.payload._bridge?.tables||{});}catch(e){if(active)setError(message(e));}})();return()=>{active=false;};},[id]);
  useEffect(()=>{if(info)void loadSource().catch(e=>setError(message(e)));},[orderVersion]);
  function message(e:unknown){const m=(e as Error).message;return m.includes('RESERVATION_NOT_FOUND')?'Cette réservation n’a pas encore été migrée. Ouvrez Dipsy Tables sur l’appareil qui la contient, puis confirmez sa migration.':m.includes('BRIDGE_AUTH_REQUIRED')?'Connectez-vous avec un compte autorisé pour cette réservation.':m.includes('VERSION_CONFLICT')?'La réservation a changé pendant votre saisie. Comparez les versions avant de continuer.':m;}
  function beginEdit(){if(!info)return;const r=info.reservation;setEdit({name:r.booking.name,phone:r.booking.phone||'',visit_date:r.visit_date.slice(0,10),table_ref:r.booking.table,baseVersion:r.version});setError('');}

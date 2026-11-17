@@ -31,6 +31,9 @@ async function connectPublic(){
 async function bootstrap(){
  checkingPublic=true;
  if(reservationLink().requested){
+  const free=navigator.onLine?await publicSupabase.rpc('dipsy_bridge_public_access').abortSignal(AbortSignal.timeout(10000)):{data:null,error:true};
+  if(!free.error)localStorage.setItem('dipsy-bridge-free-enabled',String(free.data===true));
+  if(free.error?localStorage.getItem('dipsy-bridge-free-enabled')==='true':free.data===true){checkingPublic=false;publicAvailable=true;await connectPublic();return;}
   const response=await supabase.auth.getSession();const session=bootSession||response.data.session;checkingPublic=false;
   if(session)await connect(session);else emit({mode:'login',session:null,publicAccess:false,role:null,error:reservationLink().id?'Connectez-vous pour ouvrir cette réservation sécurisée.':'Identifiant de réservation invalide.'});
   return;
@@ -62,7 +65,7 @@ async function connect(session:Session){
   subscribe();await refresh();await flush();
  }catch(e){if(gen!==generation)return;emit({mode:'login',role:null,error:(e as Error).message,connection:'error'});}
 }
-function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events',...(state.publicAccess?[]:['dipsy_reservations'])])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
+function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events','dipsy_reservations'])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
 export async function refresh(){
  if(state.mode!=='live'||!state.session)return;
  if(!navigator.onLine){emit({connection:'offline'});return;}

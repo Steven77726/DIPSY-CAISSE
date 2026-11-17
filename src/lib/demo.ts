@@ -33,8 +33,18 @@ export function applyDemo(s:Snapshot,op:Operation):Snapshot{
   if(existing&&orderPaid(next,existing.id)>0)throw new Error('ORDER_HAS_PAYMENTS');
   const now=new Date().toISOString();const o:Order=existing?{...existing,table_id:p.table_id||null,client_id:p.client_id||null,label:p.label||'',status:p.status,version:existing.version+1,updated_at:now}:{id:op.entityId,number:Math.max(1040,...next.orders.map(o=>o.number))+1,table_id:p.table_id||null,client_id:p.client_id||null,label:p.label||'',status:p.status,version:1,created_at:now,updated_at:now,created_by:demoActor};
   const old=next.lines.filter(l=>l.order_id===o.id);next.lines=next.lines.filter(l=>l.order_id!==o.id);
-  p.lines.forEach((l:any)=>{const prev=old.find(x=>x.id===l.id);const prod=next.products.find(x=>x.id===l.product_id)!;const unit=prev?.unit_price_cents??prod.price_cents;const vat=prev?.vat_bps??prod.vat_bps;const total=unit*l.quantity;next.lines.push({...l,order_id:o.id,name:prev?.name??prod.name,unit_price_cents:unit,vat_bps:vat,accounting_group:prev?.accounting_group??prod.accounting_group,total_cents:total,net_cents:netCents(total,vat)});});
+  p.lines.forEach((l:any)=>{const prev=old.find(x=>x.id===l.id);const prod=next.products.find(x=>x.id===l.product_id)!;const unit=prev?.unit_price_cents??prod.price_cents;const vat=prev?.vat_bps??prod.vat_bps;const total=unit*l.quantity;next.lines.push({...l,order_id:o.id,name:prev?.name??prod.name,reference:prev?.reference??prod.reference??'',unit_price_cents:unit,vat_bps:vat,accounting_group:prev?.accounting_group??prod.accounting_group,total_cents:total,net_cents:netCents(total,vat)});});
   next.orders=[o,...next.orders.filter(x=>x.id!==o.id)];
+ }else if(op.kind==='correct_line'){
+  if(!existing||existing.version!==op.baseVersion)throw new Error('VERSION_CONFLICT');
+  if(['paid','cancelled'].includes(existing.status))throw new Error('ORDER_LOCKED');
+  if(orderPaid(next,existing.id)>0)throw new Error('ORDER_HAS_PAYMENTS');
+  const l=next.lines.find(l=>l.id===p.line_id&&l.order_id===existing.id),prod=next.products.find(x=>x.id===p.product_id);
+  if(!l||!prod)throw new Error('LINE_NOT_FOUND');
+  if(!p.name.trim()||!Number.isInteger(p.quantity)||p.quantity<1||p.quantity>999||!Number.isInteger(p.unit_price_cents)||p.unit_price_cents<1||p.unit_price_cents>1000000)throw new Error('INVALID_LINE');
+  if(l.product_id!==prod.id){l.vat_bps=prod.vat_bps;l.accounting_group=prod.accounting_group;}
+  l.vat_bps=p.vat_bps??l.vat_bps;l.accounting_group=p.accounting_group??l.accounting_group;
+  Object.assign(l,{reference:p.reference??l.reference??'',product_id:prod.id,name:p.name.trim(),quantity:p.quantity,unit_price_cents:p.unit_price_cents,total_cents:p.quantity*p.unit_price_cents,net_cents:netCents(p.quantity*p.unit_price_cents,l.vat_bps)});existing.version++;existing.updated_at=new Date().toISOString();
  }else if(op.kind==='pay'||op.kind==='cancel_order'){
   if(!existing||existing.version!==op.baseVersion)throw new Error('VERSION_CONFLICT');
   if(['paid','cancelled'].includes(existing.status))throw new Error('ORDER_LOCKED');

@@ -166,3 +166,5 @@ body.dialog-open{overflow:hidden}
  .modal .amount-input{font-size:30px}
  .toast{left:calc(50% + 40px);bottom:max(94px,calc(env(safe-area-inset-bottom,0px) + 94px))}
 }
+
+.line-correction{min-height:44px;padding:6px 0;text-align:left;}

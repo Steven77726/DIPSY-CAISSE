@@ -4,7 +4,7 @@ import {randomUUID as uuid} from 'node:crypto';
 import assert from 'node:assert/strict';
 async function setup(){const db=new PGlite();
 await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;create publication supabase_realtime;`);
-for(const file of ['database/schema.sql','database/public-access.sql','supabase/migrations/20261116225040_reservation_bridge.sql'])await db.exec((await readFile(new URL('../'+file,import.meta.url),'utf8')).split('-- ACTIVATE_PUBLIC_ACCESS:')[0]);
+for(const file of ['database/schema.sql','database/public-access.sql','supabase/migrations/20261116225040_reservation_bridge.sql','supabase/migrations/20261117103425_article_corrections.sql'])await db.exec((await readFile(new URL('../'+file,import.meta.url),'utf8')).split('-- ACTIVATE_PUBLIC_ACCESS:')[0]);
 return db;}
 const db=await setup();
 const admin=uuid(),staff=uuid(),outsider=uuid(),guest=uuid();

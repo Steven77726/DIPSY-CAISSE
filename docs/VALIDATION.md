@@ -80,3 +80,14 @@ Le ticket différencie une réponse réseau inconnue d’un refus explicite Post
 Le sélecteur des nouveaux tickets indépendants propose les clients propres à Caisse ; un ancien ticket refusé pour association à un client de réservation peut reprendre sans cette association, en conservant ses articles. Les refus d’autosauvegarde attendent une correction utilisateur avant un nouvel envoi.
 
 Sept régressions moteur supplémentaires couvrent le refus persistant, le conflit sans écrasement, la réponse de paiement perdue, les envois simultanés, le verrou d’un autre onglet, la rafale Realtime et la confirmation reçue dans un autre onglet. `npm run check` : 29 tests applicatifs et 61 vérifications PostgreSQL, restauration comprise.
+
+
+## Carte partagée et retrait des tables — 17 novembre 2026
+
+Les rubriques sont Plats, Vins, Cocktails, Boissons et Alcool. Les anciens produits Entrées/Desserts restent conservés et apparaissent parmi les plats. Le prix, la TVA et le groupe comptable restent propres au produit et indépendants de sa rubrique.
+
+Les flèches de Carte & TVA envoient une opération `reorder_products` persistée avant le réseau. Le classement versionné par rubrique dans Supabase est la source de vérité des commandes et des paramètres. Une ancienne préférence locale n’est importée automatiquement que si aucun classement serveur n’a encore été défini ; une comparaison de version empêche l’écrasement concurrent. Une réponse inconnue garde son identifiant d’origine.
+
+`test:catalog` vérifie aussi les retraits : texte de confirmation, conservation des soldes et règlements, disparition après libération, réemploi du nom, droits, concurrence et restauration. Les scénarios UI sont exécutés sur une caisse PostgreSQL embarquée isolée, avec des données fictives. Aucun ticket ni paiement réel de production n’est utilisé pour ces tests.
+
+Validation finale de cette évolution : 34 tests applicatifs et 76 contrôles PostgreSQL (dont 15 pour le classement, le retrait et leur restauration), soit 110 contrôles. Les tests antérieurs de salle ont été adaptés à la disparition du carré après libération ; les vérifications des paiements et des historiques sont conservées.

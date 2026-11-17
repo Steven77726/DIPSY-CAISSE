@@ -1,5 +1,5 @@
 import type {Snapshot,Product,Line,Operation,Order} from './domain';
-import {emptySnapshot,netCents,orderTotal,orderPaid} from './domain';
+import {categories,emptySnapshot,netCents,orderTotal,orderPaid} from './domain';
 const uid=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 export const demoActor=uid(9999);
 export function demoSnapshot():Snapshot{
@@ -9,8 +9,9 @@ export function demoSnapshot():Snapshot{
  ['Rigatoni à la truffe','plats',2800,1000,'food'],['Filet de bar','plats',3200,1000,'food'],['Suprême de volaille','plats',2600,1000,'food'],['Entrecôte & frites','plats',3600,1000,'food'],
  ['Tiramisu maison','desserts',1100,1000,'food'],['Fondant chocolat','desserts',1200,1000,'food'],['Pavlova fruits rouges','desserts',1300,1000,'food'],
  ['Eau minérale 75 cl','boissons',700,1000,'non_alcohol'],['Eau à emporter · fermée','boissons',400,550,'non_alcohol'],['Citronnade maison','boissons',800,1000,'non_alcohol'],['Espresso','boissons',350,1000,'non_alcohol'],
- ['Spritz signature','alcool',1500,2000,'alcohol'],['Margarita','alcool',1600,2000,'alcohol'],['Verre de rosé','alcool',900,2000,'alcohol'],['Champagne · bouteille','alcool',9500,2000,'alcohol'],['Bière pression','alcool',800,2000,'alcohol']];
+ ['Spritz signature','cocktails',1500,2000,'alcohol'],['Margarita','cocktails',1600,2000,'alcohol'],['Verre de rosé','vins',900,2000,'alcohol'],['Champagne · bouteille','vins',9500,2000,'alcohol'],['Bière pression','alcool',800,2000,'alcohol']];
  s.products=catalog.map(([name,category,price_cents,vat_bps,accounting_group],i)=>({id:uid(i+1),name,category,price_cents,vat_bps,accounting_group,active:true,version:1}));
+ s.product_order=categories.filter(c=>c.id!=='all').map((c,i)=>({id:uid(7000+i),category:c.id as Product['category'],product_ids:[],version:0}));
  s.tables=Array.from({length:16},(_,i)=>({id:uid(100+i),label:`Table ${String(i+1).padStart(2,'0')}`,seats:i%3===0?6:4,active:true,version:1}));
  s.clients=[{id:uid(200),name:'Camille Martin',phone:'06 12 34 56 78',version:1,created_at:ago(60)},{id:uid(201),name:'Alexandre Laurent',phone:'06 98 76 54 32',version:1,created_at:ago(120)},{id:uid(202),name:'Léa Dubois',phone:'07 11 22 33 44',version:1,created_at:ago(90)}];
  const order=(n:number,table:number,status:Order['status'],minutes:number,items:[number,number][],client:number|null=null)=>{
@@ -28,7 +29,10 @@ export function demoSnapshot():Snapshot{
 }
 export function applyDemo(s:Snapshot,op:Operation):Snapshot{
  const next=structuredClone(s);const p=op.payload as any;const existing=next.orders.find(o=>o.id===op.entityId);
- if(op.kind==='save_order'){
+ if(op.kind==='reorder_products'){
+  const order=next.product_order?.find(o=>o.id===op.entityId);if(!order||order.version!==op.baseVersion)throw Error('VERSION_CONFLICT');
+  order.product_ids=[...p.product_ids];order.version++;
+ }else if(op.kind==='save_order'){
   if(existing&&existing.version!==op.baseVersion)throw new Error('VERSION_CONFLICT');
   if(existing&&(existing.status==='paid'||existing.status==='cancelled'))throw new Error('ORDER_LOCKED');
   if(existing&&orderPaid(next,existing.id)>0)throw new Error('ORDER_HAS_PAYMENTS');
@@ -39,8 +43,11 @@ export function applyDemo(s:Snapshot,op:Operation):Snapshot{
   if(o.table_id){const sessions=next.table_sessions ||= [];const current=sessions.find(s=>s.table_id===o.table_id&&!s.released_at);if(current&&current.order_id!==o.id)throw Error('TABLE_BUSY');if(!current)sessions.push({id:crypto.randomUUID(),table_id:o.table_id,order_id:o.id,launched_at:p.status==='due'?now:null,released_at:null,version:1,created_by:demoActor,created_at:now,updated_at:now});}
  }else if(op.kind==='launch_service'){
   if(!existing||existing.version!==op.baseVersion)throw Error('VERSION_CONFLICT');const session=next.table_sessions?.find(s=>s.order_id===existing.id&&!s.released_at);if(!session)throw Error('TABLE_SESSION_NOT_FOUND');if(!next.lines.some(l=>l.order_id===existing.id))throw Error('EMPTY_ORDER');if(['paid','cancelled'].includes(existing.status))throw Error('ORDER_LOCKED');session.launched_at=new Date().toISOString();session.version++;existing.status='due';existing.version++;
+ }else if(op.kind==='archive_table'){
+  const t=next.tables.find(t=>t.id===op.entityId);if(!t||t.version!==op.baseVersion)throw Error('VERSION_CONFLICT');if(p.confirmation!=='supprimer')throw Error('TABLE_CONFIRMATION_REQUIRED');
+  t.active=false;t.version++;const s=next.table_sessions?.find(s=>s.table_id===t.id&&!s.released_at);if(s){s.released_at=new Date().toISOString();s.version++;}
  }else if(op.kind==='release_table'){
-  const session=next.table_sessions?.find(s=>s.id===op.entityId),o=next.orders.find(o=>o.id===session?.order_id);if(!session||!o||session.version!==op.baseVersion||p.order_version!==o.version)throw Error('VERSION_CONFLICT');if(o.status!=='paid'||orderPaid(next,o.id)!==orderTotal(next,o.id))throw Error('TABLE_NOT_SETTLED');session.released_at=new Date().toISOString();session.version++;
+  const session=next.table_sessions?.find(s=>s.id===op.entityId),o=next.orders.find(o=>o.id===session?.order_id);if(!session||!o||session.version!==op.baseVersion||p.order_version!==o.version)throw Error('VERSION_CONFLICT');if(o.status!=='paid'||orderPaid(next,o.id)!==orderTotal(next,o.id))throw Error('TABLE_NOT_SETTLED');session.released_at=new Date().toISOString();session.version++;const t=next.tables.find(t=>t.id===session.table_id);if(t){t.active=false;t.version++;}
  }else if(op.kind==='correct_line'){
   if(!existing||existing.version!==op.baseVersion)throw new Error('VERSION_CONFLICT');
   if(['paid','cancelled'].includes(existing.status))throw new Error('ORDER_LOCKED');

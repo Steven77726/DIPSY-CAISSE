@@ -10,7 +10,7 @@ Dans Commandes, « Créer une table » ajoute une table propre à la caisse. Sé
 - Vert : commande validée, service lancé ; un versement partiel conserve le vert.
 - Rouge : ticket intégralement payé, occupation conservée jusqu’au clic sur « Libérer la table ».
 
-La libération clôture uniquement l’occupation. Elle ne supprime ni commande, ni article, ni TVA, ni paiement. Le prochain service reçoit un nouvel identifiant de commande. L’historique reste accessible via les encaissements réglés. Les annulations sans paiement clôturent leur occupation avec leur historique.
+La libération clôture l’occupation et retire le carré de « Vos tables » en archivant la table (`active=false`). Elle ne supprime ni commande, ni article, ni TVA, ni paiement. Une nouvelle table peut reprendre le même nom avec un nouvel identifiant, sans changer les anciens tickets. L’historique reste accessible via les encaissements réglés. Les annulations sans paiement clôturent leur occupation avec leur historique.
 
 ## Enregistrement automatique et concurrence
 
@@ -23,3 +23,10 @@ Les états de couleur proviennent de `caisse_snapshot()` confirmé par Supabase.
 ## Vérification
 
 Treize contrôles PostgreSQL couvrent création, renommage, occupation unique, retrait du dernier article, lancement, paiements partiels, clôture rouge, libération idempotente, nouveau service et restauration. Un test de mise à niveau conserve un ancien ticket payé et vérifie le raccordement de la RPC après migration. Les tests de brouillons couvrent le changement de table, la relecture locale, les réponses tardives et les trois couleurs. Les tests existants de TVA, articles, droits, paiement et passerelle restent actifs.
+
+
+## Retirer n’importe quelle table de la salle
+
+L’action « Supprimer » exige la saisie de `supprimer`, y compris pour une table vide ou déjà payée. Elle archive la table et clôture son occupation, sans supprimer ni annuler le ticket. Un solde impayé reste dans Encaissement et peut toujours être réglé ; les montants et la TVA restent inchangés. La caisse contrôle les versions de la table, de l’occupation et du ticket avant tout retrait. Une modification concurrente exige une nouvelle vérification. Le carré reste visible tant que le serveur n’a pas confirmé. Une répétition avec le même identifiant retourne le même résultat.
+
+La désactivation directe par `save_table` est refusée pour une table active : le retrait passe toujours par la confirmation dédiée. Les tables liées à Dipsy Tables ne sont pas modifiées. Les anciens brouillons d’une table retirée restent conservés localement et leur envoi automatique est arrêté.

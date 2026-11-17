@@ -65,7 +65,7 @@ async function connect(session:Session){
   subscribe();await refresh();await flush();
  }catch(e){if(gen!==generation)return;emit({mode:'login',role:null,error:(e as Error).message,connection:'error'});}
 }
-function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events','caisse_table_sessions','dipsy_reservations'])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
+function subscribe(){if(channel||!state.session)return;channel=transport().channel(`caisse-${state.session.user.id}`);for(const table of ['caisse_access','caisse_products','caisse_product_order','caisse_tables','caisse_clients','caisse_orders','caisse_order_lines','caisse_payments','caisse_events','caisse_table_sessions','dipsy_reservations'])channel.on('postgres_changes',{event:'*',schema:'public',table},()=>{clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>void refresh(),200);});channel.subscribe(status=>{realtimeReady=status==='SUBSCRIBED';if(realtimeReady){void refresh();}else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)&&state.mode==='live'){emit({connection:navigator.onLine?'error':'offline',error:'La liaison temps réel est interrompue. Reconnexion automatique…'});}});}
 export async function refresh(){
  // Coalesce reads, with at most one follow-up for callers arriving during a read.
  // Realtime events must never keep an acknowledgement waiting indefinitely.
@@ -114,7 +114,7 @@ export async function flush(){
     if(gen!==generation)return;const err=e as {code?:string;message:string};
     const network=!err.code||err.code.startsWith('08')||['57014','53300','57P01','PGRST000','PGRST001','PGRST002','PGRST003'].includes(err.code);
     if(network){emit({connection:navigator.onLine?'error':'offline',error:'Connexion interrompue. Votre opération est conservée et sera vérifiée automatiquement.'});break;}
-    const failed:Operation={...op,status:err.message.includes('VERSION_CONFLICT')?'conflict':'failed',error:err.message};await saveOperation(user,failed);emit({pending:state.pending.map(p=>p.id===op.id?failed:p),connection:'error',error:readableError(err.message)});
+    const failed:Operation={...op,status:(err.message.includes('VERSION_CONFLICT')||err.message.includes('PRODUCT_LIST_CHANGED'))?'conflict':'failed',error:err.message};await saveOperation(user,failed);emit({pending:state.pending.map(p=>p.id===op.id?failed:p),connection:'error',error:readableError(err.message)});
    }
   }
  };

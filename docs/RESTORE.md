@@ -2,7 +2,7 @@
 
 ## Périmètre
 
-Une sauvegarde caisse cohérente doit inclure les **dix** tables `public.caisse_*`, notamment `caisse_operations` (clés d’idempotence) et `caisse_events` (historique), ainsi que `caisse_runtime` (mode d’accès et acteur technique). Une copie de paiements sans leurs clés d’opération pourrait autoriser la duplication d’un ancien envoi après restauration.
+Une sauvegarde caisse cohérente doit inclure toutes les tables `public.caisse_*`, notamment `caisse_operations` (clés d’idempotence) et `caisse_events` (historique), ainsi que `caisse_runtime` (mode d’accès et acteur technique). Une copie de paiements sans leurs clés d’opération pourrait autoriser la duplication d’un ancien envoi après restauration.
 
 `scripts/backup.sh` crée un dump PostgreSQL de données cohérent, limité aux tables de la caisse et chiffré avec une clé publique age. Les paramètres `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` et `AGE_RECIPIENT` viennent du gestionnaire de secrets. Utiliser PostgreSQL client 17 ou ultérieur compatible avec le serveur. Le dump ne modifie aucune table. La clé privée de déchiffrement se conserve hors de GitHub et hors de la caisse.
 
@@ -39,3 +39,6 @@ Les anciennes copies des appareils sont conservées avant la première migration
 Le périmètre courant comprend aussi `caisse_table_sessions`, soit seize tables au total. Cette table associe chaque occupation à son ticket et conserve les dates de lancement et de libération. Elle doit être restaurée avec les commandes, opérations, paiements et événements. Le dump `caisse_*` l’inclut automatiquement. Appliquer aussi la migration `20261117152052_caisse_table_services.sql` avant la restauration des données.
 
 `npm run test:bridge` comprend un exercice supplémentaire sur les seize tables : restauration des occupations, puis réessai d’une ancienne libération. Le ticket du service suivant reste occupé et aucun paiement n’est supprimé ou ajouté.
+
+
+Le classement partagé est stocké dans `caisse_product_order`, avec sa version et son journal `reorder_products`. Il fait partie du dump `caisse_*`. Le test `npm run test:catalog` restaure également le classement et les tables archivées, puis rejoue leurs opérations sans changer les paiements ni masquer un service ultérieur.

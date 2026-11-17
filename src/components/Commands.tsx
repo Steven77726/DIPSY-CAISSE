@@ -10,6 +10,7 @@ import OperationNotice from './OperationNotice';
 import {independentTable,tableState,currentSession} from '../lib/table-room';
 import {freshDraft,orderDraft,readDraftBook,writeDraftBook,acknowledgeDraft,reconcileDraft} from '../lib/order-drafts';
 import type {Draft,DraftBook} from '../lib/order-drafts';
+import {sortProducts,menuCategory} from '../lib/product-order';
 export const categoryIcons={entrees:Salad,plats:UtensilsCrossed,desserts:CakeSlice,boissons:Coffee,alcool:Wine,vins:Wine,cocktails:Wine};
 export default function Commands({onPay,onProduct,onSettings,reservationOrderId,visible=true}:{visible?:boolean;reservationOrderId?:string;onPay:(o:Order)=>void;onProduct:()=>void;onSettings:()=>void}){
  const {data,role,mode,session,pending}=useEngine();
@@ -27,23 +28,24 @@ export default function Commands({onPay,onProduct,onSettings,reservationOrderId,
  const saved=data.orders.find(o=>o.id===draft.id);const operation=pending.find(p=>p.entityId===draft.id);const waiting=!!operation;const locked=!!saved&&(saved.status==='paid'||saved.status==='cancelled'||orderPaid(data,saved.id)>0);const stale=!!saved&&saved.version!==draft.version;
  const dirty=draft.edited||(!saved&&draft.lines.length>0);
  const blockedReservationClient=!!operation&&operation.status!=='queued'&&operation.kind==='save_order'&&!!operation.error?.includes('RESERVATION_USE_BRIDGE')&&!saved?.reservation_id&&data.clients.some(c=>c.id===draft.client_id&&c.reservation_id);
- const ownTable=data.tables.find(t=>t.id===draft.table_id&&independentTable(t));const service=saved?currentSession(data,saved):undefined;const needsLaunch=!!ownTable&&!service?.launched_at&&!locked;
+ const ownTable=data.tables.find(t=>t.active&&t.id===draft.table_id&&independentTable(t));const service=saved?currentSession(data,saved):undefined;const needsLaunch=!!ownTable&&!service?.launched_at&&!locked;
  // A later edit or a draft on another table is never overwritten by a network acknowledgement.
  useEffect(()=>{let next=bookRef.current;let changed=false;for(const d of Object.values(next.drafts)){
   const updated=reconcileDraft(d,data,pending);if(updated===d)continue;
   next={...next,drafts:{...next.drafts,[d.id]:updated}};changed=true;
  }if(changed)persist(next);},[data.orders,data.lines,pending]);
  useEffect(()=>{if(reservationOrderId){const o=data.orders.find(o=>o.id===reservationOrderId);if(o&&bookRef.current.selected!==o.id)selectOrder(o);}},[reservationOrderId,data.orders]);
+ useEffect(()=>{if(draft.table_id&&data.tables.some(t=>t.id===draft.table_id&&!t.active)){put(freshDraft(),true);setError('');setMobileTicket(false);}},[draft.table_id,data.tables]);
  useEffect(()=>{if(!visible)setMobileTicket(false);},[visible]);
  useEffect(()=>{if(!mobileTicket)return;const media=window.matchMedia('(max-width:950px)');const update=()=>document.body.classList.toggle('mobile-ticket-open',media.matches);update();media.addEventListener('change',update);return()=>{media.removeEventListener('change',update);document.body.classList.remove('mobile-ticket-open');};},[mobileTicket]);
  // Saving scans every retained draft, including a table that was just left.
  useEffect(()=>{if(busy||storageError)return;const timer=setTimeout(()=>{const state=getEngine();const candidate=Object.values(bookRef.current.drafts).find(d=>{
-  const o=state.data.orders.find(o=>o.id===d.id);return d.edited&&(d.lines.length>0||!!o)&&!d.submitted&&!d.saveError&&!state.pending.some(p=>p.entityId===d.id)&&(!o||o.version===d.version&& !['paid','cancelled'].includes(o.status)&&orderPaid(state.data,o.id)===0);
+  const o=state.data.orders.find(o=>o.id===d.id);return (!d.table_id||state.data.tables.some(t=>t.id===d.table_id&&t.active))&&d.edited&&(d.lines.length>0||!!o)&&!d.submitted&&!d.saveError&&!state.pending.some(p=>p.entityId===d.id)&&(!o||o.version===d.version&& !['paid','cancelled'].includes(o.status)&&orderPaid(state.data,o.id)===0);
  });if(candidate)void saveDraft(candidate);},650);return()=>clearTimeout(timer);},[book,busy,storageError,pending,data.orders]);
- const active=data.orders.filter(o=>['open','due'].includes(o.status));const shown=active.filter(o=>filter==='all'||o.status===filter);
+ const active=data.orders.filter(o=>['open','due'].includes(o.status)&&(!o.table_id||data.tables.some(t=>t.id===o.table_id&&t.active)));const shown=active.filter(o=>filter==='all'||o.status===filter);
  const localDrafts=Object.values(book.drafts).filter(d=>!d.table_id&&d.lines.length&&!data.orders.some(o=>o.id===d.id));
  const total=draft.lines.reduce((n,l)=>n+l.quantity*l.unit_price_cents,0);const vat=draft.lines.reduce((n,l)=>{const t=l.quantity*l.unit_price_cents;return n+t-netCents(t,l.vat_bps);},0);
- const products=data.products.filter(p=>p.active&&(category==='all'||p.category===category)&&p.name.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr'))).sort((a,b)=>{const order=JSON.parse(localStorage.getItem('dipsy-product-order')||'[]') as string[];return (order.indexOf(a.id)<0?9999:order.indexOf(a.id))-(order.indexOf(b.id)<0?9999:order.indexOf(b.id));});
+ const products=sortProducts(data.products,data.product_order).filter(p=>p.active&&(category==='all'||menuCategory(p.category)===category)&&p.name.toLocaleLowerCase('fr').includes(search.toLocaleLowerCase('fr')));
  function fromOrder(o:Order){put(orderDraft(getEngine().data,o),true);setError('');}
  function selectOrder(o:Order){const cached=bookRef.current.drafts[o.id];put(cached?.edited?cached:orderDraft(getEngine().data,o),true);setError('');setMobileTicket(true);}
  function selectTable(t:Table){const state=getEngine();const current=tableState(state.data,t.id);if(current.order){selectOrder(current.order);return;}

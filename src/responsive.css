@@ -174,3 +174,5 @@ body.dialog-open{overflow:hidden}
 @media(max-width:700px){.caisse-room{padding:14px;margin-bottom:18px;border-radius:12px}.room-heading,.room-selected{align-items:stretch;flex-direction:column}.room-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.room-table{padding:12px;min-height:125px}.room-table strong{font-size:18px}.room-table>span:first-child{align-items:flex-start}.room-heading .btn{align-self:flex-start}.room-selected .btn{min-height:44px}.room-table small{line-height:1.4}}
 
 .operation-notice{display:block;text-align:left}.operation-notice>strong{display:block}.operation-notice p{margin:8px 0;font-size:13px;line-height:1.5}.operation-notice .btn{margin-top:8px;white-space:normal;min-height:44px}
+
+.product-order-controls{display:flex;gap:6px;white-space:nowrap}.product-order-controls .icon-btn{width:44px;min-width:44px;height:44px}.catalog-sync-note{padding:0 24px 12px;margin:0;color:#617366;font-size:13px}.product-catalog>.operation-notice,.product-catalog>.form-error{margin:12px 20px}.product-catalog .table-scroll{max-width:100%}

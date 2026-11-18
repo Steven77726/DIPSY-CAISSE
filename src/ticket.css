@@ -1,0 +1,57 @@
+/* The ticket has one scroll area. Lines never have their own clipped viewport. */
+.ticket,.ticket.mobile-open{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-padding-top:85px;scroll-padding-bottom:280px}
+.ticket>.ticket-heading{position:sticky;top:0;z-index:3;flex-shrink:0;background:#fff}
+.ticket>.ticket-details,.ticket>.ticket-items-heading{flex-shrink:0}
+.ticket .ticket-lines,.ticket.mobile-open .ticket-lines{flex:1 0 auto;min-height:180px;max-height:none;overflow:visible;padding:0 16px}
+.ticket-lines .ticket-list-caption{font-size:11px;padding-top:12px}
+.ticket-details{border-bottom:1px solid var(--line);background:#fcfdf9}
+.ticket-details>summary{list-style:none;margin:0;padding:10px 16px;min-height:48px;display:flex;align-items:center;gap:10px;font-size:13px;color:#5d6f61;cursor:pointer}
+.ticket-details>summary::-webkit-details-marker{display:none}
+.ticket-details>summary>strong{margin-left:auto;text-align:right;overflow-wrap:anywhere;min-width:0;font-size:13px;color:var(--ink)}
+.ticket-details>summary>span,.ticket-details>summary>svg{flex-shrink:0}
+.ticket-details[open]>summary>svg{transform:rotate(180deg)}
+.ticket-details .ticket-context{border:0;padding-top:0}
+.ticket-items-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:#fff}
+.ticket-items-heading>strong{font-size:12px;font-weight:500;color:#637564}
+.ticket-items-heading .btn{font-size:13px;min-height:44px;padding:8px 10px;white-space:normal}
+.ticket .ticket-bottom{flex-shrink:0;position:sticky;bottom:0;z-index:2;background:#fff}
+.ticket-line{align-items:flex-start;gap:12px;padding:14px 0}
+.line-description{flex:1;min-width:0}
+.line-description>strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;display:block;-webkit-line-clamp:unset;font-size:15px;line-height:1.5}
+.line-description>small{display:block;overflow-wrap:anywhere;line-height:1.5;margin-top:3px;font-size:12px;color:#6b7b69}
+.line-description>span{font-size:12px;line-height:1.5;color:#6b7b69}
+.ticket-line>strong{flex-shrink:0;font-size:15px;line-height:1.5}
+.ticket-line-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ticket-line-actions .quantity-control{margin:0}
+.ticket-line-actions .line-correction{min-height:44px;margin:0;padding:4px 6px;font-size:12px;gap:6px}
+.ticket .ticket-line-actions .line-correction{font-size:0;gap:0;min-width:44px;justify-content:center}
+.ticket .ticket-tax-summary{display:flex;gap:12px;justify-content:space-between}
+.ticket-tax-summary .subtotal{display:block;line-height:1.5;font-size:12px;margin-bottom:0}
+.ticket-tax-summary .subtotal>span{display:block}.ticket-tax-summary .subtotal>span:last-child{font-weight:600;color:#4c604d}
+.full-ticket-lines .ticket-line{padding:18px 0}
+.full-ticket-lines .line-description>strong{font-size:18px}
+.full-ticket-lines .line-description>span,.full-ticket-lines .line-description>small{font-size:14px}
+.full-ticket-lines .ticket-line>strong{font-size:18px}
+.full-ticket-lines .quantity-control{height:48px;gap:0}
+.full-ticket-lines .quantity-control>button{min-width:48px;min-height:48px}
+.full-ticket-lines .quantity-control b{min-width:32px;font-size:16px}
+.full-ticket-lines .line-correction{font-size:14px;min-height:48px}
+.full-ticket-totals{margin:20px 0;padding:18px;background:#f1f5eb;border-radius:12px}
+.full-ticket-totals>div{display:flex;justify-content:space-between;gap:16px;padding:8px 0;font-size:15px}
+.full-ticket-totals strong{white-space:nowrap}
+.full-ticket-totals .full-ticket-total{border-top:1px solid #dce5d2;margin-top:8px;padding-top:16px;font-size:22px}
+.full-ticket-totals+.fine-print{margin:16px 0}
+@media(min-width:951px) and (max-width:1366px){
+ .service-screen:has(.ticket-has-lines) .service-header{padding-block:8px}
+ .service-screen:has(.ticket-has-lines) .service-header .eyebrow,.service-screen:has(.ticket-has-lines) .service-header p{display:none}
+ .service-screen:has(.ticket-has-lines) .service-header h1{font-size:23px;margin:0}
+ .service-screen:has(.ticket-has-lines) .service-snapshot{padding:8px 12px;gap:4px}
+ .service-screen:has(.ticket-has-lines) .service-snapshot>div{display:none}
+}
+@media(max-width:700px){
+ .ticket.mobile-open .line-description>strong{font-size:15px;line-height:1.5}
+ .ticket.mobile-open .line-description>span{font-size:12px}
+ .ticket-items-heading{padding-inline:16px}.ticket-items-heading .btn{font-size:12px}
+ .full-ticket-lines .line-description>strong,.full-ticket-lines .ticket-line>strong{font-size:16px}
+ .full-ticket-totals>div{font-size:14px}.full-ticket-totals .full-ticket-total{font-size:20px}
+}

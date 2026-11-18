@@ -3,6 +3,7 @@ import App from './App';
 import './style.css';
 import './responsive.css';
 import './ipad.css';
+import './ticket.css';
 import {trackViewport} from './lib/viewport';
 trackViewport();
 createRoot(document.getElementById('root')!).render(<App/>);
